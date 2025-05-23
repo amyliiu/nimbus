@@ -9,5 +9,6 @@ import (
 func NewRouter() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hello", handler.HelloHandler)
+	mux.HandleFunc("/newvm", handler.NewVMHandler)
 	return mux
 }
