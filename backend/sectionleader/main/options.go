@@ -22,10 +22,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"log"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	models "github.com/firecracker-microvm/firecracker-go-sdk/client/models"
+	log "github.com/sirupsen/logrus"
 )
 
 func newOptions() *options {
@@ -79,7 +79,7 @@ func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
 	// validate metadata json
 	if opts.FcMetadata != "" {
 		if err := json.Unmarshal([]byte(opts.FcMetadata), &opts.validMetadata); err != nil {
-			return firecracker.Config{}, fmt.Errorf("%s: %v", "invalid metadata", err)
+			return firecracker.Config{}, fmt.Errorf("%s: %v", errInvalidMetadata.Error(), err)
 		}
 	}
 	//setup NICs

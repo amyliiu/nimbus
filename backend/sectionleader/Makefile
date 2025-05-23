@@ -11,7 +11,7 @@ all: build
 # Build the binary
 .PHONY: build
 build:
-	go build -o $(BINARY_NAME) ./cmd/sectionleader
+	go build -o $(BINARY_NAME) ./main
 
 # Run the application
 .PHONY: run
