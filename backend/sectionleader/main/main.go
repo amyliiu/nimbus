@@ -14,14 +14,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"net/http"
 	"os"
-	"os/exec"
-	"os/signal"
-	"syscall"
 
-	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	flags "github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
 )
@@ -34,149 +30,43 @@ const (
 	firecrackerDefaultPath = "firecracker"
 )
 
+// var Opts = newOptions();
+
 func main() {
-	opts := newOptions()
-	p := flags.NewParser(opts, flags.Default)
-	// if no args just print help
-	if len(os.Args) == 1 {
-		p.WriteHelp(os.Stderr)
-		os.Exit(0)
-	}
-	_, err := p.ParseArgs(os.Args)
-	if err != nil {
-		// ErrHelp indicates that the help message was printed so we
-		// can exit
-		if val, ok := err.(*flags.Error); ok && val.Type == flags.ErrHelp {
-			os.Exit(0)
-		}
-		p.WriteHelp(os.Stderr)
-		os.Exit(1)
-	}
+	// opts := newOptions()
+	// p := flags.NewParser(opts, flags.Default)
+	// // if no args just print help
+	// if len(os.Args) == 1 {
+	// 	p.WriteHelp(os.Stderr)
+	// 	os.Exit(0)
+	// }
+	// _, err := p.ParseArgs(os.Args)
+	// if err != nil {
+	// 	// ErrHelp indicates that the help message was printed so we
+	// 	// can exit
+	// 	if val, ok := err.(*flags.Error); ok && val.Type == flags.ErrHelp {
+	// 		os.Exit(0)
+	// 	}
+	// 	p.WriteHelp(os.Stderr)
+	// 	os.Exit(1)
+	// }
 
-	if opts.Version {
-		// TODO: placeholder
-		fmt.Println("PLACEHOLDER")
-		os.Exit(0)
-	}
+	// if opts.Version {
+	// 	// TODO: placeholder
+	// 	fmt.Println("PLACEHOLDER")
+	// 	os.Exit(0)
+	// }
 
-	defer opts.Close()
+	// Opts = opts;
+	// defer opts.Close()
 
-	if err := runVMM(context.Background(), opts); err != nil {
+
+	// if err := runVMM(context.Background(), opts); err != nil {
+	// 	log.Fatalf(err.Error())
+	// }
+	
+	r := NewRouter();
+	if err := http.ListenAndServe(":6123", r); err != nil {
 		log.Fatalf(err.Error())
 	}
-}
-
-// Run a vmm with a given set of options
-func runVMM(ctx context.Context, opts *options) error {
-	// convert options to a firecracker config
-	fcCfg, err := opts.getFirecrackerConfig()
-	if err != nil {
-		log.Errorf("Error: %s", err)
-		return err
-	}
-	logger := log.New()
-
-	if opts.Debug {
-		log.SetLevel(log.DebugLevel)
-		logger.SetLevel(log.DebugLevel)
-	}
-
-	vmmCtx, vmmCancel := context.WithCancel(ctx)
-	defer vmmCancel()
-
-	machineOpts := []firecracker.Opt{
-		firecracker.WithLogger(log.NewEntry(logger)),
-	}
-
-	var firecrackerBinary string
-	if len(opts.FcBinary) != 0 {
-		firecrackerBinary = opts.FcBinary
-	} else {
-		firecrackerBinary, err = exec.LookPath(firecrackerDefaultPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	finfo, err := os.Stat(firecrackerBinary)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("Binary %q does not exist: %v", firecrackerBinary, err)
-	}
-
-	if err != nil {
-		return fmt.Errorf("Failed to stat binary, %q: %v", firecrackerBinary, err)
-	}
-
-	if finfo.IsDir() {
-		return fmt.Errorf("Binary, %q, is a directory", firecrackerBinary)
-	} else if finfo.Mode()&executableMask == 0 {
-		return fmt.Errorf("Binary, %q, is not executable. Check permissions of binary", firecrackerBinary)
-	}
-
-	// if the jailer is used, the final command will be built in NewMachine()
-	if fcCfg.JailerCfg == nil {
-		cmd := firecracker.VMCommandBuilder{}.
-			WithBin(firecrackerBinary).
-			WithSocketPath(fcCfg.SocketPath).
-			WithStdin(os.Stdin).
-			WithStdout(os.Stdout).
-			WithStderr(os.Stderr).
-			Build(ctx)
-
-		machineOpts = append(machineOpts, firecracker.WithProcessRunner(cmd))
-	}
-
-	m, err := firecracker.NewMachine(vmmCtx, fcCfg, machineOpts...)
-	if err != nil {
-		return fmt.Errorf("Failed creating machine: %s", err)
-	}
-
-	if err := m.Start(vmmCtx); err != nil {
-		return fmt.Errorf("Failed to start machine: %v", err)
-	}
-	defer func() {
-		if err := m.StopVMM(); err != nil {
-			log.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
-		}
-	}()
-
-	if opts.validMetadata != nil {
-		if err := m.SetMetadata(vmmCtx, opts.validMetadata); err != nil {
-			log.Errorf("An error occurred while setting Firecracker VM metadata: %v", err)
-		}
-	}
-
-	installSignalHandlers(vmmCtx, m)
-
-	// wait for the VMM to exit
-	if err := m.Wait(vmmCtx); err != nil {
-		return fmt.Errorf("Wait returned an error %s", err)
-	}
-	log.Printf("Start machine was happy")
-	return nil
-}
-
-// Install custom signal handlers:
-func installSignalHandlers(ctx context.Context, m *firecracker.Machine) {
-	go func() {
-		// Clear some default handlers installed by the firecracker SDK:
-		signal.Reset(os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
-
-		for {
-			switch s := <-c; {
-			case s == syscall.SIGTERM || s == os.Interrupt:
-				log.Printf("Caught signal: %s, requesting clean shutdown", s.String())
-				if err := m.Shutdown(ctx); err != nil {
-					log.Errorf("An error occurred while shutting down Firecracker VM: %v", err)
-				}
-			case s == syscall.SIGQUIT:
-				log.Printf("Caught signal: %s, forcing shutdown", s.String())
-				if err := m.StopVMM(); err != nil {
-					log.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
-				}
-			}
-		}
-	}()
 }

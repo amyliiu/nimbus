@@ -1,6 +1,7 @@
 firecracker-install/
 firectl/
 test-images/
-sectionleader
+data/
+ref/
 
 .env
