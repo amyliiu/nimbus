@@ -15,11 +15,11 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"os"
-
-	flags "github.com/jessevdk/go-flags"
-	log "github.com/sirupsen/logrus"
+	// "net/http"
+	// "os"
+	"strings"
+	// flags "github.com/jessevdk/go-flags"
+	// log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -33,40 +33,17 @@ const (
 // var Opts = newOptions();
 
 func main() {
-	// opts := newOptions()
-	// p := flags.NewParser(opts, flags.Default)
-	// // if no args just print help
-	// if len(os.Args) == 1 {
-	// 	p.WriteHelp(os.Stderr)
-	// 	os.Exit(0)
-	// }
-	// _, err := p.ParseArgs(os.Args)
-	// if err != nil {
-	// 	// ErrHelp indicates that the help message was printed so we
-	// 	// can exit
-	// 	if val, ok := err.(*flags.Error); ok && val.Type == flags.ErrHelp {
-	// 		os.Exit(0)
-	// 	}
-	// 	p.WriteHelp(os.Stderr)
-	// 	os.Exit(1)
-	// }
-
-	// if opts.Version {
-	// 	// TODO: placeholder
-	// 	fmt.Println("PLACEHOLDER")
-	// 	os.Exit(0)
-	// }
-
-	// Opts = opts;
-	// defer opts.Close()
-
-
-	// if err := runVMM(context.Background(), opts); err != nil {
+	// r := NewRouter();
+	// if err := http.ListenAndServe(":6123", r); err != nil {
 	// 	log.Fatalf(err.Error())
 	// }
-	
-	r := NewRouter();
-	if err := http.ListenAndServe(":6123", r); err != nil {
-		log.Fatalf(err.Error())
+
+	var cmd string
+	for strings.ToLower(cmd) != "quit" {
+		fmt.Printf("VM$ ")
+		fmt.Scan(&cmd)
+		if strings.ToLower(cmd) == "run" {
+			go SpawnVM()
+		}
 	}
 }

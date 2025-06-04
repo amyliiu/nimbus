@@ -18,7 +18,7 @@ import (
 
 const (
 	refSquashFsPath = "./ref/ubuntu-24.04.squashfs.upstream"
-	refImgPath      = ".ref/vmlinux"
+	refImgPath      = "./ref/vmlinux"
 )
 
 type vmFilePaths struct {
@@ -62,7 +62,7 @@ func createVMFolder(id uuid.UUID) (vmFilePaths, error) {
 		return vmFilePaths{}, err
 	}
 	defer srcImg.Close()
-	dstImgPath := "./data/" + id.String() + "vmlinux"
+	dstImgPath := "./data/" + id.String() + "/vmlinux"
 	dstImg, err := os.Create(dstImgPath)
 	if err != nil {
 		return vmFilePaths{}, err
