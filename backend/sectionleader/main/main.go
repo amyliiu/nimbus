@@ -14,7 +14,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+
 	// "net/http"
 	// "os"
 	"strings"
@@ -38,12 +41,22 @@ func main() {
 	// 	log.Fatalf(err.Error())
 	// }
 
+	scanner := bufio.NewScanner(os.Stdin)
 	var cmd string
-	for strings.ToLower(cmd) != "quit" {
+
+	for {
 		fmt.Printf("VM$ ")
-		fmt.Scan(&cmd)
-		if strings.ToLower(cmd) == "run" {
+		if !scanner.Scan() {
+			break // EOF or error
+		}
+		cmd = strings.ToLower(strings.TrimSpace(scanner.Text()))
+
+		if cmd == "quit" {
+			break
+		}
+		if cmd == "run" {
 			go SpawnVM()
 		}
 	}
+
 }

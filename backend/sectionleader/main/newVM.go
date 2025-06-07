@@ -24,20 +24,20 @@ const (
 type vmFilePaths struct {
 	id            uuid.UUID
 	kernelImgPath string
-	fsImgPath     string
+	fsRootPath    string
 }
 
 func SpawnVM() error {
 	id := uuid.New()
-	fmt.Println("Creating new VM, UUID: ", id.String())
+	fmt.Println("Creating new VM, UUID:", id.String())
 
-	paths, err := createVMFolder(id)
+	vmPaths, err := createVMFolder(id)
 	if err != nil {
 		log.Fatal(err)
 		return err
 	}
 
-	opts, err := setVMOpts(paths)
+	opts, err := setVMOpts(vmPaths)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -52,7 +52,8 @@ func SpawnVM() error {
 }
 
 func createVMFolder(id uuid.UUID) (vmFilePaths, error) {
-	err := os.MkdirAll("data/"+id.String(), 0755)
+	dstRootPath := "./data/" + id.String()
+	err := os.MkdirAll(dstRootPath, 0755)
 	if err != nil {
 		log.Fatal(err)
 		return vmFilePaths{}, err
@@ -62,7 +63,7 @@ func createVMFolder(id uuid.UUID) (vmFilePaths, error) {
 		return vmFilePaths{}, err
 	}
 	defer srcImg.Close()
-	dstImgPath := "./data/" + id.String() + "/vmlinux"
+	dstImgPath := dstRootPath + "/vmlinux"
 	dstImg, err := os.Create(dstImgPath)
 	if err != nil {
 		return vmFilePaths{}, err
@@ -72,38 +73,32 @@ func createVMFolder(id uuid.UUID) (vmFilePaths, error) {
 	if err != nil {
 		return vmFilePaths{}, err
 	}
-	srcFs, err := os.Open(refSquashFsPath)
-	if err != nil {
-		return vmFilePaths{}, err
-	}
-	defer srcFs.Close()
-	dstFsPath := "./data/" + id.String() + "/squashfs"
-	dstFs, err := os.Create(dstFsPath)
-	if err != nil {
-		return vmFilePaths{}, err
-	}
-	defer dstFs.Close()
 
-	_, err = io.Copy(dstFs, srcFs)
+	extractedFsPath := dstRootPath + "/squashfs-root"
+	err = exec.Command("unsquashfs", "-d", extractedFsPath, refSquashFsPath).Run()
 	if err != nil {
+		log.Fatal(err)
 		return vmFilePaths{}, err
 	}
 
-	extractedFsPath := ""
-	cmd := exec.Command("unsquashfs", "-d", "./data/"+id.String()+"/squashfs-root", dstFsPath)
-	err = cmd.Run()
+	err = exec.Command("./prepVM.sh", dstRootPath).Run()
 	if err != nil {
+		log.Fatal(err)
 		return vmFilePaths{}, err
 	}
+	
+	fsExt4Path := dstRootPath + "/fs.ext4"
 
-	return vmFilePaths{id, dstImgPath, extractedFsPath}, nil
+	return vmFilePaths{id, dstImgPath, fsExt4Path}, nil
 }
 
 func setVMOpts(p vmFilePaths) (*options, error) {
 	opts := newOptions()
-	opts.FcBinary = "firecracker"
+	opts.FcBinary = "../../firecracker/release/firecracker"
 	opts.FcKernelImage = p.kernelImgPath
-	opts.FcRootDrivePath = p.fsImgPath
+	opts.FcRootDrivePath = p.fsRootPath
+	opts.FcCPUCount = 1
+	opts.FcMemSz = 512
 	return opts, nil
 }
 
