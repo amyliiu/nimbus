@@ -99,6 +99,7 @@ func setVMOpts(p vmFilePaths) (*options, error) {
 	opts.FcRootDrivePath = p.fsRootPath
 	opts.FcCPUCount = 1
 	opts.FcMemSz = 512
+	opts.FcSocketPath = "/tmp/firecracker.socket"
 	return opts, nil
 }
 
