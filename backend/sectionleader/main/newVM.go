@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	refSquashFsPath = "./ref/ubuntu-24.04.squashfs.upstream"
+	refSquashFsPath = "./ref/squashfs"
 	refImgPath      = "./ref/vmlinux"
 )
 
@@ -29,7 +29,7 @@ type vmFilePaths struct {
 
 func SpawnVM() error {
 	id := uuid.New()
-	fmt.Println("New VM created, UUID: ", id.String())
+	fmt.Println("Creating new VM, UUID: ", id.String())
 
 	paths, err := createVMFolder(id)
 	if err != nil {
@@ -77,7 +77,7 @@ func createVMFolder(id uuid.UUID) (vmFilePaths, error) {
 		return vmFilePaths{}, err
 	}
 	defer srcFs.Close()
-	dstFsPath := "./data/" + id.String() + "/fs.squashfs.upstream"
+	dstFsPath := "./data/" + id.String() + "/squashfs"
 	dstFs, err := os.Create(dstFsPath)
 	if err != nil {
 		return vmFilePaths{}, err
@@ -88,8 +88,13 @@ func createVMFolder(id uuid.UUID) (vmFilePaths, error) {
 	if err != nil {
 		return vmFilePaths{}, err
 	}
-	
+
 	extractedFsPath := ""
+	cmd := exec.Command("unsquashfs", "-d", "./data/"+id.String()+"/squashfs-root", dstFsPath)
+	err = cmd.Run()
+	if err != nil {
+		return vmFilePaths{}, err
+	}
 
 	return vmFilePaths{id, dstImgPath, extractedFsPath}, nil
 }
