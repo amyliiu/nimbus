@@ -35,6 +35,7 @@ func newOptions() *options {
 }
 
 type options struct {
+	CniNetworkName     string   `long:"cni-network-name" description:"CNI network name, must match the 'name' field in /etc/cni/conf.d/fcnet.conflist"`
 	FcBinary           string   `long:"firecracker-binary" description:"Path to firecracker binary"`
 	FcKernelImage      string   `long:"kernel" description:"Path to the kernel image" default:"./vmlinux"`
 	FcKernelCmdLine    string   `long:"kernel-opts" description:"Kernel commandline" default:"ro console=ttyS0 noapic reboot=k panic=1 pci=off nomodules"`
@@ -42,7 +43,7 @@ type options struct {
 	FcRootDrivePath    string   `long:"root-drive" description:"Path to root disk image"`
 	FcRootPartUUID     string   `long:"root-partition" description:"Root partition UUID"`
 	FcAdditionalDrives []string `long:"add-drive" description:"Path to additional drive, suffixed with :ro or :rw, can be specified multiple times"`
-	FcNicConfig        []string `long:"tap-device" description:"NIC info, specified as DEVICE/MAC, can be specified multiple times"`
+	// FcNicConfig        []string `long:"tap-device" description:"NIC info, specified as DEVICE/MAC, can be specified multiple times"`
 	FcVsockDevices     []string `long:"vsock-device" description:"Vsock interface, specified as PATH:CID. Multiple OK"`
 	FcLogFifo          string   `long:"vmm-log-fifo" description:"FIFO for firecracker logs"`
 	FcLogLevel         string   `long:"log-level" description:"vmm log level" default:"Debug"`
@@ -83,10 +84,18 @@ func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
 		}
 	}
 	//setup NICs
-	NICs, err := opts.getNetwork()
-	if err != nil {
-		return firecracker.Config{}, err
-	}
+	// NICs, err := opts.getNetwork()
+	// if err != nil {
+	// 	return firecracker.Config{}, err
+	// }
+
+	CniNetworkConf := []firecracker.NetworkInterface{{
+		CNIConfiguration: &firecracker.CNIConfiguration{
+			NetworkName: opts.CniNetworkName,
+			IfName:      "veth0",
+		},
+	}}
+
 	// BlockDevices
 	blockDevices, err := opts.getBlockDevices()
 	if err != nil {
@@ -146,7 +155,7 @@ func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
 		KernelArgs:        opts.FcKernelCmdLine,
 		InitrdPath:        opts.FcInitrd,
 		Drives:            blockDevices,
-		NetworkInterfaces: NICs,
+		NetworkInterfaces: CniNetworkConf,
 		VsockDevices:      vsocks,
 		MachineCfg: models.MachineConfiguration{
 			VcpuCount:   firecracker.Int64(opts.FcCPUCount),
@@ -159,27 +168,27 @@ func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
 	}, nil
 }
 
-func (opts *options) getNetwork() ([]firecracker.NetworkInterface, error) {
-	var NICs []firecracker.NetworkInterface
-	if len(opts.FcNicConfig) > 0 {
-		for _, nicConfig := range opts.FcNicConfig {
-			tapDev, tapMacAddr, err := parseNicConfig(nicConfig)
-			if err != nil {
-				return nil, err
-			}
-			allowMMDS := opts.validMetadata != nil
-			nic := firecracker.NetworkInterface{
-				StaticConfiguration: &firecracker.StaticNetworkConfiguration{
-					MacAddress:  tapMacAddr,
-					HostDevName: tapDev,
-				},
-				AllowMMDS: allowMMDS,
-			}
-			NICs = append(NICs, nic)
-		}
-	}
-	return NICs, nil
-}
+// func (opts *options) getNetwork() ([]firecracker.NetworkInterface, error) {
+// 	var NICs []firecracker.NetworkInterface
+// 	if len(opts.FcNicConfig) > 0 {
+// 		for _, nicConfig := range opts.FcNicConfig {
+// 			tapDev, tapMacAddr, err := parseNicConfig(nicConfig)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			allowMMDS := opts.validMetadata != nil
+// 			nic := firecracker.NetworkInterface{
+// 				StaticConfiguration: &firecracker.StaticNetworkConfiguration{
+// 					MacAddress:  tapMacAddr,
+// 					HostDevName: tapDev,
+// 				},
+// 				AllowMMDS: allowMMDS,
+// 			}
+// 			NICs = append(NICs, nic)
+// 		}
+// 	}
+// 	return NICs, nil
+// }
 
 // constructs a list of drives from the options config
 func (opts *options) getBlockDevices() ([]models.Drive, error) {
@@ -327,13 +336,13 @@ func parseBlockDevices(entries []string) ([]models.Drive, error) {
 }
 
 // Given a string of the form DEVICE/MACADDR, return the device name and the mac address, or an error
-func parseNicConfig(cfg string) (string, string, error) {
-	fields := strings.Split(cfg, "/")
-	if len(fields) != 2 || len(fields[0]) == 0 || len(fields[1]) == 0 {
-		return "", "", errInvalidNicConfig
-	}
-	return fields[0], fields[1], nil
-}
+// func parseNicConfig(cfg string) (string, string, error) {
+// 	fields := strings.Split(cfg, "/")
+// 	if len(fields) != 2 || len(fields[0]) == 0 || len(fields[1]) == 0 {
+// 		return "", "", errInvalidNicConfig
+// 	}
+// 	return fields[0], fields[1], nil
+// }
 
 // Given a list of string representations of vsock devices,
 // return a corresponding slice of machine.VsockDevice objects

@@ -86,7 +86,7 @@ func createVMFolder(id uuid.UUID) (vmFilePaths, error) {
 		log.Fatal(err)
 		return vmFilePaths{}, err
 	}
-	
+
 	fsExt4Path := dstRootPath + "/fs.ext4"
 
 	return vmFilePaths{id, dstImgPath, fsExt4Path}, nil
@@ -99,7 +99,8 @@ func setVMOpts(p vmFilePaths) (*options, error) {
 	opts.FcRootDrivePath = p.fsRootPath
 	opts.FcCPUCount = 1
 	opts.FcMemSz = 512
-	opts.FcSocketPath = "/tmp/firecracker.socket"
+	opts.FcSocketPath = "/tmp/firecracker" + p.id.String() + ".socket"
+	// opts.FcNicConfig = []string{"tap0/06:00:AC:10:00:02"}
 	return opts, nil
 }
 
