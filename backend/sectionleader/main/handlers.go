@@ -19,5 +19,4 @@ type requestData struct {
 }
 
 func NewVMHandler(w http.ResponseWriter, r *http.Request) {
-	go SpawnVM()
 }

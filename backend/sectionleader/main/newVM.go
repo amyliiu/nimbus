@@ -27,28 +27,36 @@ type vmFilePaths struct {
 	fsRootPath    string
 }
 
-func SpawnVM() error {
+func SpawnVM(ctx context.Context) (*firecracker.Machine, MachineUUID, error) {
 	id := MachineUUID(uuid.New())
 	fmt.Println("Creating new VM, UUID:", id.String())
 
 	vmPaths, err := createVMFolder(id)
 	if err != nil {
 		log.Fatal(err)
-		return err
+		return nil, id, err
 	}
 
 	opts, err := setVMOpts(vmPaths)
 	if err != nil {
 		log.Fatal(err)
-		return err
+		return nil, id, err
 	}
-	// FIXME: idk what this does
 	defer opts.Close()
 
-	if err := runVMM(context.Background(), opts); err != nil {
-		log.Fatalf("%s", err.Error())
+	// if machine, err := runVMM(context.Background(), opts); err != nil {
+
+	// 	log.Fatalf("%s", err.Error())
+	// }
+	
+	vmCtx, vmCancel := context.WithCancel(ctx)
+	machine, err := runVMM(vmCtx, opts)
+	if err != nil {
+		vmCancel()
+		return nil, id, err
 	}
-	return nil
+
+	return machine, id, nil
 }
 
 func createVMFolder(id MachineUUID) (vmFilePaths, error) {
@@ -110,12 +118,12 @@ func setVMOpts(p vmFilePaths) (*options, error) {
 }
 
 // Run a vmm with a given set of options
-func runVMM(ctx context.Context, opts *options) error {
+func runVMM(ctx context.Context, opts *options) (*firecracker.Machine, error) {
 	// convert options to a firecracker config
 	fcCfg, err := opts.getFirecrackerConfig()
 	if err != nil {
 		log.Errorf("Error: %s", err)
-		return err
+		return nil, err
 	}
 	logger := log.New()
 
@@ -137,23 +145,23 @@ func runVMM(ctx context.Context, opts *options) error {
 	} else {
 		firecrackerBinary, err = exec.LookPath(firecrackerDefaultPath)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	finfo, err := os.Stat(firecrackerBinary)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("binary %q does not exist: %v", firecrackerBinary, err)
+		return nil, fmt.Errorf("binary %q does not exist: %v", firecrackerBinary, err)
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to stat binary, %q: %v", firecrackerBinary, err)
+		return nil, fmt.Errorf("failed to stat binary, %q: %v", firecrackerBinary, err)
 	}
 
 	if finfo.IsDir() {
-		return fmt.Errorf("binary, %q, is a directory", firecrackerBinary)
+		return nil, fmt.Errorf("binary, %q, is a directory", firecrackerBinary)
 	} else if finfo.Mode()&executableMask == 0 {
-		return fmt.Errorf("binary, %q, is not executable. Check permissions of binary", firecrackerBinary)
+		return nil, fmt.Errorf("binary, %q, is not executable. Check permissions of binary", firecrackerBinary)
 	}
 
 	// if the jailer is used, the final command will be built in NewMachine()
@@ -171,11 +179,11 @@ func runVMM(ctx context.Context, opts *options) error {
 
 	m, err := firecracker.NewMachine(vmmCtx, fcCfg, machineOpts...)
 	if err != nil {
-		return fmt.Errorf("failed creating machine: %s", err)
+		return nil, fmt.Errorf("failed creating machine: %s", err)
 	}
 
 	if err := m.Start(vmmCtx); err != nil {
-		return fmt.Errorf("failed to start machine: %v", err)
+		return nil, fmt.Errorf("failed to start machine: %v", err)
 	}
 	defer func() {
 		if err := m.StopVMM(); err != nil {
@@ -193,10 +201,10 @@ func runVMM(ctx context.Context, opts *options) error {
 
 	// wait for the VMM to exit
 	if err := m.Wait(vmmCtx); err != nil {
-		return fmt.Errorf("wait returned an error %s", err)
+		return nil, fmt.Errorf("wait returned an error %s", err)
 	}
 	log.Printf("Start machine was happy")
-	return nil
+	return m, nil
 }
 
 // Install custom signal handlers:

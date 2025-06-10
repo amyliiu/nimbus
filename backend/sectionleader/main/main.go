@@ -9,7 +9,7 @@ import (
 	// "os"
 	"strings"
 	// flags "github.com/jessevdk/go-flags"
-	// log "github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -28,6 +28,7 @@ func main() {
 	// 	log.Fatalf(err.Error())
 	// }
 
+	vmMan := NewVMManager()
 	scanner := bufio.NewScanner(os.Stdin)
 	var cmd string
 
@@ -43,7 +44,10 @@ func main() {
 		}
 		if cmd == "run" {
 			// TODO: sync, not sure why using goroutine breaks this
-			SpawnVM()
+			err := vmMan.CreateVM()
+			if err != nil {
+				log.Fatalf("failed to create vm")
+			}
 		}
 	}
 
