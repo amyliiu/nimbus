@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -140,9 +139,12 @@ func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
 		if opts.FcSocketPath != "" {
 			socketPath = opts.FcSocketPath
 		} else {
-			// or generate a default socket path
-			socketPath = getSocketPath()
+			return firecracker.Config{}, fmt.Errorf("no FcSocketPath error")
 		}
+		// else {
+		// 	// or generate a default socket path
+		// 	socketPath = getSocketPath()
+		// }
 	}
 
 	return firecracker.Config{
@@ -374,35 +376,35 @@ func createFifoFileLogs(fifoPath string) (*os.File, error) {
 // and searching for the existence of directories {$HOME, os.TempDir()} and returning
 // the path with the first directory joined with the unique filename. If we can't
 // find a good path panics.
-func getSocketPath() string {
-	filename := strings.Join([]string{
-		".firecracker.sock",
-		strconv.Itoa(os.Getpid()),
-		strconv.Itoa(rand.Intn(1000))},
-		"-",
-	)
-	var dir string
-	if d := os.Getenv("HOME"); checkExistsAndDir(d) {
-		dir = d
-	} else if checkExistsAndDir(os.TempDir()) {
-		dir = os.TempDir()
-	} else {
-		panic("Unable to find a location for firecracker socket. 'It's not going to do any good to land on mars if we're stupid.' --Ray Bradbury")
-	}
+// func getSocketPath() string {
+// 	filename := strings.Join([]string{
+// 		".firecracker.sock",
+// 		strconv.Itoa(os.Getpid()),
+// 		strconv.Itoa(rand.Intn(1000))},
+// 		"-",
+// 	)
+// 	var dir string
+// 	if d := os.Getenv("HOME"); checkExistsAndDir(d) {
+// 		dir = d
+// 	} else if checkExistsAndDir(os.TempDir()) {
+// 		dir = os.TempDir()
+// 	} else {
+// 		panic("Unable to find a location for firecracker socket. 'It's not going to do any good to land on mars if we're stupid.' --Ray Bradbury")
+// 	}
 
-	return filepath.Join(dir, filename)
-}
+// 	return filepath.Join(dir, filename)
+// }
 
-// checkExistsAndDir returns true if path exists and is a Dir
-func checkExistsAndDir(path string) bool {
-	// empty
-	if path == "" {
-		return false
-	}
-	// does it exist?
-	if info, err := os.Stat(path); err == nil {
-		// is it a directory?
-		return info.IsDir()
-	}
-	return false
-}
+// // checkExistsAndDir returns true if path exists and is a Dir
+// func checkExistsAndDir(path string) bool {
+// 	// empty
+// 	if path == "" {
+// 		return false
+// 	}
+// 	// does it exist?
+// 	if info, err := os.Stat(path); err == nil {
+// 		// is it a directory?
+// 		return info.IsDir()
+// 	}
+// 	return false
+// }

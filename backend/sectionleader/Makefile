@@ -21,7 +21,8 @@ run:
 # Clean up binaries
 .PHONY: clean
 clean:
-	rm -f $(BINARY_NAME)
+	rm $(BINARY_NAME)
+	rm -rf data
 
 # Format the code
 .PHONY: fmt

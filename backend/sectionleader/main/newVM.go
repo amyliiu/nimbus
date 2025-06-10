@@ -100,6 +100,11 @@ func setVMOpts(p vmFilePaths) (*options, error) {
 	opts.FcCPUCount = 1
 	opts.FcMemSz = 512
 	opts.FcSocketPath = "/tmp/firecracker" + p.id.String() + ".socket"
+	CniNetworkName, err := GenerateCniConfFile(p.id)
+	if err != nil {
+		return nil, err
+	}
+	opts.CniNetworkName = CniNetworkName
 	// opts.FcNicConfig = []string{"tap0/06:00:AC:10:00:02"}
 	return opts, nil
 }
