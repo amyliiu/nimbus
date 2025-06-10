@@ -22,13 +22,13 @@ const (
 )
 
 type vmFilePaths struct {
-	id            uuid.UUID
+	id            MachineUUID
 	kernelImgPath string
 	fsRootPath    string
 }
 
 func SpawnVM() error {
-	id := uuid.New()
+	id := MachineUUID(uuid.New())
 	fmt.Println("Creating new VM, UUID:", id.String())
 
 	vmPaths, err := createVMFolder(id)
@@ -51,7 +51,7 @@ func SpawnVM() error {
 	return nil
 }
 
-func createVMFolder(id uuid.UUID) (vmFilePaths, error) {
+func createVMFolder(id MachineUUID) (vmFilePaths, error) {
 	dstRootPath := "./data/" + id.String()
 	err := os.MkdirAll(dstRootPath, 0755)
 	if err != nil {

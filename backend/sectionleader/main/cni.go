@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/google/uuid"
 )
 
 const CniConfRootDir = "/etc/cni/conf.d"
@@ -34,7 +32,7 @@ type CNIConfig struct {
 var usedSubnets map[uint8]struct{} = make(map[uint8]struct{})
 
 // returns name of the config generated
-func GenerateCniConfFile(id uuid.UUID) (string, error) {
+func GenerateCniConfFile(id MachineUUID) (string, error) {
 	vmID := id.String()
 	// generate unused subnet id
 	subnetID := uint8(0)
