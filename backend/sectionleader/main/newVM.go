@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 
 	"os/exec"
-	"os/signal"
-	"syscall"
 
 	uuid "github.com/google/uuid"
 
@@ -51,7 +49,7 @@ func SpawnNewVM() (*firecracker.Machine, MachineUUID, context.CancelFunc, error)
 	if err != nil {
 		return nil, id, nil, err
 	}
-	
+
 	vmmCtx, vmmCancel := context.WithCancel(context.Background())
 
 	go runFirecrackerMachine(vmmCtx, machine)
@@ -138,7 +136,7 @@ func runFirecrackerMachine(ctx context.Context, m *firecracker.Machine) {
 		}
 	}()
 
-	installSignalHandlers(ctx, m)
+	// installSignalHandlers(ctx, m)
 
 	// wait for the VMM to exit
 	if err := m.Wait(ctx); err != nil {
@@ -191,7 +189,7 @@ func setupFirecrackerMachine(opts *options) (*firecracker.Machine, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to open stdout file %s: %v", opts.FcStdoutPath, err)
 		}
-		
+
 		stderrFile, err := os.OpenFile(opts.FcStderrPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open stderr file %s: %v", opts.FcStderrPath, err)
@@ -212,31 +210,6 @@ func setupFirecrackerMachine(opts *options) (*firecracker.Machine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed creating machine: %s", err)
 	}
-	
+
 	return m, nil
-}
-
-// Install custom signal handlers:
-func installSignalHandlers(ctx context.Context, m *firecracker.Machine) {
-	go func() {
-		// Clear some default handlers installed by the firecracker SDK:
-		signal.Reset(os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
-
-		for {
-			switch s := <-c; {
-			case s == syscall.SIGTERM || s == os.Interrupt:
-				logrus.Printf("Caught signal: %s, requesting clean shutdown", s.String())
-				if err := m.Shutdown(ctx); err != nil {
-					logrus.Errorf("An error occurred while shutting down Firecracker VM: %v", err)
-				}
-			case s == syscall.SIGQUIT:
-				logrus.Printf("Caught signal: %s, forcing shutdown", s.String())
-				if err := m.StopVMM(); err != nil {
-					logrus.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
-				}
-			}
-		}
-	}()
 }

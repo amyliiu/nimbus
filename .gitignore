@@ -1,5 +1,6 @@
 data/
 
 .env
+app.log
 
 backend/sectionleader/sectionleader

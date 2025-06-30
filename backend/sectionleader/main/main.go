@@ -28,8 +28,9 @@ func main() {
 	}
 	logrus.SetOutput(logFile)
 	
+	vmManager := NewVMManager()
+	InstallSignalHandlers(vmManager)
 
-	vmMan := NewVMManager()
 	scanner := bufio.NewScanner(os.Stdin)
 	var cmd string
 
@@ -44,8 +45,7 @@ func main() {
 			break
 		}
 		if cmd == "run" {
-			// TODO: sync, not sure why using goroutine breaks this
-			err := vmMan.CreateVM()
+			err := vmManager.CreateVM()
 			if err != nil {
 				logrus.Errorf("createvm failed")
 			}

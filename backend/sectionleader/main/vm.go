@@ -44,6 +44,25 @@ func (man *VMManager) CreateVM() error {
 	return nil
 }
 
-func (man *VMManager) RemoveVM() {
+func (manager *VMManager) GracefulShutdownVM(id MachineUUID) error {
+	vmPtr := manager.VMs[id]
+	err := vmPtr.Machine.Shutdown(context.Background())
+	if err != nil {
+		return err
+	}
 
+	vmPtr.cancel()
+	vmPtr.Active = false
+
+	return nil
+}
+
+func (manager *VMManager) GracefulShutdownAll() error {
+	for id := range manager.VMs {
+		err := manager.GracefulShutdownVM(id)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
