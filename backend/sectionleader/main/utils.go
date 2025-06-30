@@ -5,8 +5,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
+
+type MachineUUID uuid.UUID
+
+func (o MachineUUID) String() string {
+	return uuid.UUID(o).String()
+}
+
 
 func InstallSignalHandlers(manager *VMManager) {
 	go func() {
@@ -33,6 +41,8 @@ func InstallSignalHandlers(manager *VMManager) {
 					logrus.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
 				}
 			}
+			println()
+			os.Exit(0)
 		}
 	}()
 }

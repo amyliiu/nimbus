@@ -17,7 +17,7 @@ import "errors"
 
 var (
 	// Error parsing nic config
-	errInvalidNicConfig = errors.New("NIC config wasn't of the form DEVICE/MACADDR")
+	// errInvalidNicConfig = errors.New("NIC config wasn't of the form DEVICE/MACADDR")
 
 	// error parsing blockdevices
 	errInvalidDriveSpecificationNoSuffix = errors.New("invalid drive specification. Must have :rw or :ro suffix")
@@ -31,5 +31,5 @@ var (
 	errUnableToCreateFifoLogFile = errors.New("failed to create fifo log file")
 
 	// error with firecracker config
-	errInvalidMetadata = errors.New("invalid metadata, unable to parse as json")
+	// errInvalidMetadata = errors.New("invalid metadata, unable to parse as json")
 )
