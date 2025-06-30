@@ -2,16 +2,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/firecracker-microvm/firecracker-go-sdk"
-	log "github.com/sirupsen/logrus"
+	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
+	"github.com/sirupsen/logrus"
 )
 
 type VM struct {
 	Machine *firecracker.Machine
 	Id      MachineUUID
 	Active  bool
-	ctx     context.Context
 	cancel  context.CancelFunc
 }
 
@@ -26,18 +26,19 @@ func NewVMManager() *VMManager {
 }
 
 func (man *VMManager) CreateVM() error {
-	vmCtx, vmCancel := context.WithCancel(context.Background())
-	machine, id, err := SpawnVM(vmCtx)
+	machine, id, cancelFunc, err := SpawnNewVM()
 	if err != nil {
-		log.Errorf("failed to spawn VM: %v", err)
+		logrus.Errorf("failed to spawn VM: %v", err)
 		return err
+	}
+	if cancelFunc == nil || machine == nil{
+		return fmt.Errorf("spawnvm return error")
 	}
 	vmPtr := &VM{
 		Machine: machine,
 		Id:      id,
 		Active:  true,
-		ctx:     vmCtx,
-		cancel:  vmCancel,
+		cancel:  cancelFunc,
 	}
 	man.VMs[id] = vmPtr
 	return nil

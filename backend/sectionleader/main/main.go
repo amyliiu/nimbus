@@ -9,7 +9,7 @@ import (
 	// "os"
 	"strings"
 	// flags "github.com/jessevdk/go-flags"
-	// log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -20,13 +20,14 @@ const (
 	firecrackerDefaultPath = "firecracker"
 )
 
-// var Opts = newOptions();
-
 func main() {
-	// r := NewRouter();
-	// if err := http.ListenAndServe(":6123", r); err != nil {
-	// 	log.Fatalf(err.Error())
-	// }
+	
+	logFile, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		logrus.Fatalf("failed to open log file: %v", err)
+	}
+	logrus.SetOutput(logFile)
+	
 
 	vmMan := NewVMManager()
 	scanner := bufio.NewScanner(os.Stdin)
@@ -44,7 +45,10 @@ func main() {
 		}
 		if cmd == "run" {
 			// TODO: sync, not sure why using goroutine breaks this
-			go vmMan.CreateVM()
+			err := vmMan.CreateVM()
+			if err != nil {
+				logrus.Errorf("createvm failed")
+			}
 		}
 	}
 

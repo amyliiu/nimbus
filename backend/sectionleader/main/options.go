@@ -14,7 +14,7 @@
 package main
 
 import (
-	"encoding/json"
+	// "encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -24,7 +24,7 @@ import (
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	models "github.com/firecracker-microvm/firecracker-go-sdk/client/models"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func newOptions() *options {
@@ -54,7 +54,7 @@ type options struct {
 	FcCPUCount         int64    `long:"ncpus" short:"c" description:"Number of CPUs" default:"1"`
 	FcCPUTemplate      string   `long:"cpu-template" description:"Firecracker CPU Template (C3 or T2)"`
 	FcMemSz            int64    `long:"memory" short:"m" description:"VM memory, in MiB" default:"512"`
-	FcMetadata         string   `long:"metadata" description:"Firecracker Metadata for MMDS (json)"`
+	// FcMetadata         string   `long:"metadata" description:"Firecracker Metadata for MMDS (json)"`
 	FcFifoLogFile      string   `long:"firecracker-log" short:"l" description:"pipes the fifo contents to the specified file"`
 	FcSocketPath       string   `long:"socket-path" short:"s" description:"path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}"`
 	Debug              bool     `long:"debug" short:"d" description:"Enable debug output"`
@@ -72,7 +72,7 @@ type options struct {
 	Daemonize     bool   `long:"daemonize" description:"Run jailer as daemon"`
 
 	closers       []func() error
-	validMetadata interface{}
+	// validMetadata interface{}
 
 	createFifoFileLogs func(fifoPath string) (*os.File, error)
 }
@@ -80,11 +80,11 @@ type options struct {
 // Converts options to a usable firecracker config
 func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
 	// validate metadata json
-	if opts.FcMetadata != "" {
-		if err := json.Unmarshal([]byte(opts.FcMetadata), &opts.validMetadata); err != nil {
-			return firecracker.Config{}, fmt.Errorf("%s: %v", errInvalidMetadata.Error(), err)
-		}
-	}
+	// if opts.FcMetadata != "" {
+	// 	if err := json.Unmarshal([]byte(opts.FcMetadata), &opts.validMetadata); err != nil {
+	// 		return firecracker.Config{}, fmt.Errorf("%s: %v", errInvalidMetadata.Error(), err)
+	// 	}
+	// }
 	//setup NICs
 	// NICs, err := opts.getNetwork()
 	// if err != nil {
@@ -284,7 +284,7 @@ func (opts *options) Close() {
 	for _, closer := range opts.closers {
 		err := closer()
 		if err != nil {
-			log.Error(err)
+			logrus.Error(err)
 		}
 	}
 }

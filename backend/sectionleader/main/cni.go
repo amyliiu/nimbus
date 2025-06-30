@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
 const CniConfRootDir = "/etc/cni/conf.d"
@@ -81,5 +83,7 @@ func GenerateCniConfFile(id MachineUUID) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	logrus.Infof("created CNI config, with subnet %s, path %s", subnet, confPath)
 	return config.Name, os.WriteFile(confPath, jsonBytes, 0644)
 }

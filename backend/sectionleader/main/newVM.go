@@ -14,7 +14,7 @@ import (
 	uuid "github.com/google/uuid"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -30,43 +30,40 @@ type vmFilePaths struct {
 	stderrPath    string
 }
 
-func SpawnVM(ctx context.Context) (*firecracker.Machine, MachineUUID, error) {
+func SpawnNewVM() (*firecracker.Machine, MachineUUID, context.CancelFunc, error) {
 	id := MachineUUID(uuid.New())
 	fmt.Println("Creating new VM, UUID:", id.String())
 
 	vmPaths, err := createVMFolder(id)
 	if err != nil {
-		log.Fatal(err)
-		return nil, id, err
+		logrus.Fatal(err)
+		return nil, id, nil, err
 	}
 
 	opts, err := setVMOpts(vmPaths)
 	if err != nil {
-		log.Fatal(err)
-		return nil, id, err
+		logrus.Fatal(err)
+		return nil, id, nil, err
 	}
 	defer opts.Close()
 
-	// if machine, err := runVMM(context.Background(), opts); err != nil {
-
-	// 	log.Fatalf("%s", err.Error())
-	// }
-
-	vmCtx, vmCancel := context.WithCancel(ctx)
-	machine, err := runVMM(vmCtx, opts)
+	machine, err := setupFirecrackerMachine(opts)
 	if err != nil {
-		vmCancel()
-		return nil, id, err
+		return nil, id, nil, err
 	}
+	
+	vmmCtx, vmmCancel := context.WithCancel(context.Background())
 
-	return machine, id, nil
+	go runFirecrackerMachine(vmmCtx, machine)
+
+	return machine, id, vmmCancel, nil
 }
 
 func createVMFolder(id MachineUUID) (vmFilePaths, error) {
 	dstRootPath := "./data/" + id.String()
 	err := os.MkdirAll(dstRootPath, 0755)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 		return vmFilePaths{}, err
 	}
 	srcImg, err := os.Open(refImgPath)
@@ -88,7 +85,7 @@ func createVMFolder(id MachineUUID) (vmFilePaths, error) {
 	extractedFsPath := dstRootPath + "/squashfs-root"
 	err = exec.Command("unsquashfs", "-d", extractedFsPath, refSquashFsPath).Run()
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 		return vmFilePaths{}, err
 	}
 
@@ -102,7 +99,7 @@ func createVMFolder(id MachineUUID) (vmFilePaths, error) {
 
 	err = exec.Command("./prepVM.sh", dstRootPath).Run()
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 		return vmFilePaths{}, err
 	}
 
@@ -130,26 +127,37 @@ func setVMOpts(p vmFilePaths) (*options, error) {
 	return opts, nil
 }
 
+func runFirecrackerMachine(ctx context.Context, m *firecracker.Machine) {
+	if err := m.Start(ctx); err != nil {
+		logrus.Errorf("failed to start machine: %v", err)
+		return
+	}
+	defer func() {
+		if err := m.StopVMM(); err != nil {
+			logrus.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
+		}
+	}()
+
+	installSignalHandlers(ctx, m)
+
+	// wait for the VMM to exit
+	if err := m.Wait(ctx); err != nil {
+		logrus.Errorf("wait returned error %v", err)
+	}
+	logrus.Printf("Start machine was happy")
+}
+
 // Run a vmm with a given set of options
-func runVMM(ctx context.Context, opts *options) (*firecracker.Machine, error) {
+func setupFirecrackerMachine(opts *options) (*firecracker.Machine, error) {
 	// convert options to a firecracker config
 	fcCfg, err := opts.getFirecrackerConfig()
 	if err != nil {
-		log.Errorf("Error: %s", err)
+		logrus.Errorf("Error: %s", err)
 		return nil, err
 	}
-	logger := log.New()
-
-	if opts.Debug {
-		log.SetLevel(log.DebugLevel)
-		logger.SetLevel(log.DebugLevel)
-	}
-
-	vmmCtx, vmmCancel := context.WithCancel(ctx)
-	defer vmmCancel()
 
 	machineOpts := []firecracker.Opt{
-		firecracker.WithLogger(log.NewEntry(logger)),
+		firecracker.WithLogger(logrus.NewEntry(logrus.StandardLogger())),
 	}
 
 	var firecrackerBinary string
@@ -192,41 +200,19 @@ func runVMM(ctx context.Context, opts *options) (*firecracker.Machine, error) {
 		cmd := firecracker.VMCommandBuilder{}.
 			WithBin(firecrackerBinary).
 			WithSocketPath(fcCfg.SocketPath).
-			WithStdin(os.Stdin).
+			// WithStdin(os.Stdin).
 			WithStdout(stdoutFile).
 			WithStderr(stderrFile).
-			Build(ctx)
+			Build(context.Background())
 
 		machineOpts = append(machineOpts, firecracker.WithProcessRunner(cmd))
 	}
 
-	m, err := firecracker.NewMachine(vmmCtx, fcCfg, machineOpts...)
+	m, err := firecracker.NewMachine(context.Background(), fcCfg, machineOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating machine: %s", err)
 	}
-
-	if err := m.Start(vmmCtx); err != nil {
-		return nil, fmt.Errorf("failed to start machine: %v", err)
-	}
-	defer func() {
-		if err := m.StopVMM(); err != nil {
-			log.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
-		}
-	}()
-
-	if opts.validMetadata != nil {
-		if err := m.SetMetadata(vmmCtx, opts.validMetadata); err != nil {
-			log.Errorf("An error occurred while setting Firecracker VM metadata: %v", err)
-		}
-	}
-
-	installSignalHandlers(vmmCtx, m)
-
-	// wait for the VMM to exit
-	if err := m.Wait(vmmCtx); err != nil {
-		return nil, fmt.Errorf("wait returned an error %s", err)
-	}
-	log.Printf("Start machine was happy")
+	
 	return m, nil
 }
 
@@ -241,14 +227,14 @@ func installSignalHandlers(ctx context.Context, m *firecracker.Machine) {
 		for {
 			switch s := <-c; {
 			case s == syscall.SIGTERM || s == os.Interrupt:
-				log.Printf("Caught signal: %s, requesting clean shutdown", s.String())
+				logrus.Printf("Caught signal: %s, requesting clean shutdown", s.String())
 				if err := m.Shutdown(ctx); err != nil {
-					log.Errorf("An error occurred while shutting down Firecracker VM: %v", err)
+					logrus.Errorf("An error occurred while shutting down Firecracker VM: %v", err)
 				}
 			case s == syscall.SIGQUIT:
-				log.Printf("Caught signal: %s, forcing shutdown", s.String())
+				logrus.Printf("Caught signal: %s, forcing shutdown", s.String())
 				if err := m.StopVMM(); err != nil {
-					log.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
+					logrus.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
 				}
 			}
 		}
