@@ -34,6 +34,9 @@ func newOptions() *options {
 }
 
 type options struct {
+	FcStdoutPath	   string   `long:"stdout" description:"Path to write stdout, defaults to /dev/stdout"`
+	FcStderrPath	   string   `long:"stderr" description:"Path to write stderr, defaults to /dev/stderr"`
+
 	CniNetworkName     string   `long:"cni-network-name" description:"CNI network name, must match the 'name' field in /etc/cni/conf.d/fcnet.conflist"`
 	FcBinary           string   `long:"firecracker-binary" description:"Path to firecracker binary"`
 	FcKernelImage      string   `long:"kernel" description:"Path to the kernel image" default:"./vmlinux"`
