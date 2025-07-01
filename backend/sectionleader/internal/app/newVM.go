@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -18,6 +18,11 @@ import (
 const (
 	refSquashFsPath = "./ref/squashfs"
 	refImgPath      = "./ref/vmlinux"
+
+	// executableMask is the mask needed to check whether or not a file's
+	// permissions are executable.
+	executableMask = 0111
+	firecrackerDefaultPath = "firecracker"
 )
 
 type vmFilePaths struct {
