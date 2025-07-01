@@ -3,15 +3,24 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/sirupsen/logrus"
 )
 
+type VMState int
+
+const (
+    StateActive VMState = iota
+    StatePaused
+    StateStopped
+)
+
 type VM struct {
 	Machine *firecracker.Machine
 	Id      MachineUUID
-	Active  bool
+	State  VMState
 	cancel  context.CancelFunc
 }
 
@@ -25,7 +34,7 @@ func NewVMManager() *VMManager {
 	}
 }
 
-func (man *VMManager) CreateVM() error {
+func (manager *VMManager) CreateVM() error {
 	machine, id, cancelFunc, err := SpawnNewVM()
 	if err != nil {
 		logrus.Errorf("failed to spawn VM: %v", err)
@@ -37,10 +46,30 @@ func (man *VMManager) CreateVM() error {
 	vmPtr := &VM{
 		Machine: machine,
 		Id:      id,
-		Active:  true,
+		State:  StateActive,
 		cancel:  cancelFunc,
 	}
-	man.VMs[id] = vmPtr
+	manager.VMs[id] = vmPtr
+	return nil
+}
+
+func (manager *VMManager) PauseVM(id MachineUUID) error {
+	vmPtr := manager.VMs[id]
+	if vmPtr.State != StateActive {
+		return fmt.Errorf("machine not active, cannot be paused")	
+	}
+	vmPtr.State = StatePaused
+	
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second * 5)
+
+	go func(ctx context.Context, cancelFunc context.CancelFunc, vmPtr *VM) {
+		defer cancelFunc()
+		err := vmPtr.Machine.PauseVM(ctx)
+		if err != nil {
+			logrus.Errorf("pause vm error")
+		}
+	}(ctx, cancelFunc,vmPtr)
+	
 	return nil
 }
 
@@ -52,7 +81,7 @@ func (manager *VMManager) GracefulShutdownVM(id MachineUUID) error {
 	}
 
 	vmPtr.cancel()
-	vmPtr.Active = false
+	vmPtr.State = StateStopped
 
 	return nil
 }
