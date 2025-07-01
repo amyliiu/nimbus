@@ -1,45 +1,16 @@
-# Binary name
-BINARY_NAME=sectionleader
-
-# Source files
-SRC=$(shell find . -name '*.go' -not -path "./vendor/*")
+.PHONY: cli-sectionleader server-sectionleader clean all
 
 # Default target
-.PHONY: all
-all: build
+all: cli-sectionleader
 
-# Build the binary
-.PHONY: build
-build:
-	go build -o $(BINARY_NAME) ./main
+# Build CLI version
+cli-sectionleader:
+	go build -o cli-sectionleader ./cmd/cli
 
-# Run the application
-.PHONY: run
-run:
-	go run ./cmd/sectionleader
+# Build server version (future implementation)
+server-sectionleader:
+	go build -o server-sectionleader ./cmd/httpserver
 
-# Clean up binaries
-.PHONY: clean
+# Clean build artifacts
 clean:
-	rm $(BINARY_NAME)
-	rm -rf data
-
-# Format the code
-.PHONY: fmt
-fmt:
-	go fmt ./...
-
-# Run tests
-.PHONY: test
-test:
-	go test ./...
-
-# Install dependencies
-.PHONY: deps
-deps:
-	go mod tidy
-
-# Watch for changes and rerun (requires fswatch or similar)
-.PHONY: watch
-watch:
-	fswatch -o $(SRC) | xargs -n1 -I{} make run
+	rm -f cli-sectionleader server-sectionleader
