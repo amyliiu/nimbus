@@ -85,24 +85,25 @@ func (manager *VMManager) PauseVM(id MachineUUID) {
 	}(ctx, cancelFunc, manager, id)
 }
 
-func (manager *VMManager) ResumeVM(id MachineUUID) error {
-	vmPtr := manager.VMs[id]
-	if vmPtr.State != StatePaused {
-		return fmt.Errorf("machine not paused, cannot be resumed, id %s", id.String())
-	}
-	vmPtr.State = StateActive
+func (manager *VMManager) ResumeVM(id MachineUUID) {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second * 5)
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
-
-	go func(ctx context.Context, cancelFunc context.CancelFunc, vmPtr *VM) {
+	go func(ctx context.Context, cancelFunc context.CancelFunc, manager *VMManager, id MachineUUID) {
 		defer cancelFunc()
+
+		vmPtr := manager.VMs[id]
+		if vmPtr.State != StatePaused {
+			logrus.Errorf("machine not paused, cannot be resumed, id %s", id.String())
+			return 
+		}
 		err := vmPtr.Machine.PauseVM(ctx)
 		if err != nil {
-			logrus.Errorf("pause vm error")
+			logrus.Errorf("resume vm error")
+			return 
 		}
-	}(ctx, cancelFunc, vmPtr)
 
-	return nil
+		vmPtr.State = StateActive
+	}(ctx, cancelFunc, manager, id)
 }
 
 func (manager *VMManager) GracefulShutdownVM(id MachineUUID) {
