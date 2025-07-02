@@ -1,7 +1,7 @@
 .PHONY: cli-sectionleader server-sectionleader clean all
 
 # Default target
-all: cli-sectionleader
+all: server-sectionleader
 
 # Build CLI version
 cli-sectionleader:

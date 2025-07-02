@@ -2,3 +2,4 @@ data/
 cli-sectionleader
 server-sectionleader
 app.log
+server.log
