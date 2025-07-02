@@ -4,7 +4,9 @@ go 1.24.3
 
 require (
 	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
+	github.com/joho/godotenv v1.3.0
 	github.com/sirupsen/logrus v1.8.1
 )
 

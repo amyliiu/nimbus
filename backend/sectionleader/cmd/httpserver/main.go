@@ -8,7 +8,10 @@ import (
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/app"
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/middle"
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/handlers"
+	"github.com/joho/godotenv"
 )
+
+var SecretKey string
 
 func main() {
 	logFile, err := os.OpenFile("server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -16,6 +19,13 @@ func main() {
 		logrus.Fatalf("failed to open log file: %v", err)
 	}
 	logrus.SetOutput(logFile)
+	
+	err = godotenv.Load()
+	if err != nil {
+		logrus.Fatalf("failed to load .env: %v", err)
+	}
+	
+	SecretKey = os.Getenv("SECRET_KEY")
 
 	vmManager := app.NewVMManager()
 	app.InstallSignalHandlers(vmManager)
@@ -26,7 +36,7 @@ func main() {
 	privateMux := http.NewServeMux()
     privateMux.Handle("POST /stop-machine", http.HandlerFunc(handlers.StopMachine))
 
-	mux.Handle("/private/", http.StripPrefix("/private", middle.JwtAuth(privateMux)))
+	mux.Handle("/private/", http.StripPrefix("/private", middle.CheckJwt(privateMux)))
 	
     logrus.Println("Starting server on :8080")
 	server := http.Server{
