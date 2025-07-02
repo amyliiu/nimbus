@@ -1,3 +1,5 @@
+.env
+
 _data/
 cli-sectionleader
 server-sectionleader
