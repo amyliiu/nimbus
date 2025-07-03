@@ -50,13 +50,15 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := struct {
-		MachineId string `json:"machine_id"`
+		MachineId   string `json:"machine_id"`
 		MachineName string `json:"machine_name"`
-		Token     string `json:"token"`
+		LocalIp     string `json:"local_ip"`
+		Token       string `json:"token"`
 	}{
-		MachineId: createMachineRes.Id.String(),
+		MachineId:   createMachineRes.Id.String(),
 		MachineName: createMachineRes.Name,
-		Token:     tokenStr,
+		LocalIp:     createMachineRes.LocalIp.IP.String(),
+		Token:       tokenStr,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

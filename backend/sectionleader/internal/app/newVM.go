@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"os/exec"
 
 	"github.com/google/uuid"
+	"github.com/tongshengw/nimbus/backend/sectionleader/internal/constants"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/sirupsen/logrus"
@@ -35,30 +38,43 @@ type vmFilePaths struct {
 	stderrPath    string
 }
 
-func SpawnNewVM(ctx context.Context) (*firecracker.Machine, MachineUUID, error) {
+func SpawnNewVM(ctx context.Context) (*firecracker.Machine, MachineUUID, net.IPNet, error) {
 	id := MachineUUID(uuid.New())
 
 	vmPaths, err := createVMFolder(id)
 	if err != nil {
 		logrus.Fatal(err)
-		return nil, id, err
+		return nil, id, net.IPNet{}, err
 	}
 
 	opts, err := setVMOpts(vmPaths)
 	if err != nil {
 		logrus.Fatal(err)
-		return nil, id, err
+		return nil, id, net.IPNet{}, err
 	}
 	defer opts.Close()
 
 	machine, err := setupFirecrackerMachine(opts)
 	if err != nil {
-		return nil, id, err
+		return nil, id, net.IPNet{},err
 	}
 
-	go runFirecrackerMachine(ctx, machine)
+	machineStartedChannel := make(chan bool)
+	go runFirecrackerMachine(ctx, machine, machineStartedChannel)
 
-	return machine, id, nil
+	select {
+	case machineStarted := <-machineStartedChannel:
+		if machineStarted {
+			// success route
+			ip := machine.Cfg.NetworkInterfaces[0].StaticConfiguration.IPConfiguration.IPAddr
+			return machine, id, ip, nil
+		} else {
+			return nil, id, net.IPNet{}, fmt.Errorf("machine start fail")
+		}
+
+	case <-time.After(constants.DefaultTimeout):
+		return nil, id, net.IPNet{}, fmt.Errorf("machine start timed out")
+	}
 }
 
 func createVMFolder(id MachineUUID) (vmFilePaths, error) {
@@ -129,24 +145,24 @@ func setVMOpts(p vmFilePaths) (*options, error) {
 	return opts, nil
 }
 
-func runFirecrackerMachine(ctx context.Context, m *firecracker.Machine) {
+func runFirecrackerMachine(ctx context.Context, m *firecracker.Machine, ch chan<- bool) {
 	if err := m.Start(ctx); err != nil {
 		logrus.Errorf("failed to start machine: %v", err)
 		return
 	}
+	// FIXME: what does this do
 	defer func() {
+		logrus.Infof("machine exiting")
 		if err := m.StopVMM(); err != nil {
 			logrus.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
 		}
 	}()
 
-	// installSignalHandlers(ctx, m)
-
+	ch <- true
 	// wait for the VMM to exit
 	if err := m.Wait(ctx); err != nil {
 		logrus.Errorf("wait returned error %v", err)
 	}
-	logrus.Printf("Start machine was happy")
 }
 
 // Run a vmm with a given set of options

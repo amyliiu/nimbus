@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"net"
 	"sync"
 	"time"
 
@@ -20,6 +21,7 @@ const (
 type MachineData struct {
 	Id           MachineUUID
 	Name         string
+	LocalIp      net.IPNet
 	CreationTime time.Time
 }
 
@@ -54,7 +56,7 @@ func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
 		manager.createVmMutex.Lock()
 		defer manager.createVmMutex.Unlock()
 
-		machine, id, err := SpawnNewVM(ctx)
+		machine, id, ip, err := SpawnNewVM(ctx)
 		if err != nil {
 			logrus.Errorf("failed to spawn VM: %v", err)
 			outputChannel <- nil
@@ -76,15 +78,16 @@ func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
 			State:   StateActive,
 			cancel:  cancelFunc,
 			data: MachineData{
-				Id: id,
-				Name: "placeholder",
+				Id:           id,
+				Name:         "placeholder",
+				LocalIp:      ip,
 				CreationTime: time.Now(),
 			}}
 
 		manager.VMs[id] = vmPtr
 		outputChannel <- &vmPtr.data
 	}()
-	
+
 	return outputChannel, nil
 }
 

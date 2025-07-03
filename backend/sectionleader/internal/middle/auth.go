@@ -10,7 +10,6 @@ import (
 )
 
 func NewJwt(id app.MachineUUID, secretKey string) (string, error) {
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
 			"machineId": id.String(),
