@@ -9,7 +9,7 @@ import (
 
 	"os/exec"
 
-	uuid "github.com/google/uuid"
+	"github.com/google/uuid"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/sirupsen/logrus"
@@ -18,12 +18,12 @@ import (
 const (
 	refSquashFsPath = "./_ref/squashfs"
 	refImgPath      = "./_ref/vmlinux"
-	
+
 	dataDirPath = "./_data"
 
 	// executableMask is the mask needed to check whether or not a file's
 	// permissions are executable.
-	executableMask = 0111
+	executableMask         = 0111
 	firecrackerDefaultPath = "firecracker"
 )
 
@@ -35,32 +35,30 @@ type vmFilePaths struct {
 	stderrPath    string
 }
 
-func SpawnNewVM() (*firecracker.Machine, MachineUUID, context.CancelFunc, error) {
+func SpawnNewVM(ctx context.Context) (*firecracker.Machine, MachineUUID, error) {
 	id := MachineUUID(uuid.New())
 
 	vmPaths, err := createVMFolder(id)
 	if err != nil {
 		logrus.Fatal(err)
-		return nil, id, nil, err
+		return nil, id, err
 	}
 
 	opts, err := setVMOpts(vmPaths)
 	if err != nil {
 		logrus.Fatal(err)
-		return nil, id, nil, err
+		return nil, id, err
 	}
 	defer opts.Close()
 
 	machine, err := setupFirecrackerMachine(opts)
 	if err != nil {
-		return nil, id, nil, err
+		return nil, id, err
 	}
 
-	vmmCtx, vmmCancel := context.WithCancel(context.Background())
+	go runFirecrackerMachine(ctx, machine)
 
-	go runFirecrackerMachine(vmmCtx, machine)
-
-	return machine, id, vmmCancel, nil
+	return machine, id, nil
 }
 
 func createVMFolder(id MachineUUID) (vmFilePaths, error) {

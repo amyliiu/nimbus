@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -18,46 +17,75 @@ const (
 	StateStopped
 )
 
+type MachineData struct {
+	Id           MachineUUID
+	Name         string
+	CreationTime time.Time
+}
+
 type VM struct {
 	Machine *firecracker.Machine
 	Id      MachineUUID
 	State   VMState
 	cancel  context.CancelFunc
+	data    MachineData
 }
 
 type VMManager struct {
-	mutex sync.RWMutex
-	VMs   map[MachineUUID]*VM
+	mutex         sync.Mutex
+	createVmMutex sync.Mutex
+	VMs           map[MachineUUID]*VM
 }
 
 func NewVMManager() *VMManager {
 	return &VMManager{
-		mutex: sync.RWMutex{},
-		VMs:   make(map[MachineUUID]*VM),
+		mutex:         sync.Mutex{},
+		createVmMutex: sync.Mutex{},
+		VMs:           make(map[MachineUUID]*VM),
 	}
 }
 
-func (manager *VMManager) CreateVM() (MachineUUID, error) {
-	machine, id, cancelFunc, err := SpawnNewVM()
-	if err != nil {
-		logrus.Errorf("failed to spawn VM: %v", err)
-		return MachineUUID{}, err
-	}
-	if cancelFunc == nil || machine == nil {
-		return MachineUUID{}, fmt.Errorf("spawnvm return error")
-	}
-	vmPtr := &VM{
-		Machine: machine,
-		Id:      id,
-		State:   StateActive,
-		cancel:  cancelFunc,
-	}
+func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
+	// has to be withcancel as this is the context that lives with the machine
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	outputChannel := make(chan *MachineData)
 
-	manager.mutex.Lock()
-	defer manager.mutex.Unlock()
+	go func() {
+		manager.createVmMutex.Lock()
+		defer manager.createVmMutex.Unlock()
 
-	manager.VMs[id] = vmPtr
-	return id, nil
+		machine, id, err := SpawnNewVM(ctx)
+		if err != nil {
+			logrus.Errorf("failed to spawn VM: %v", err)
+			outputChannel <- nil
+			return
+		}
+
+		if machine == nil {
+			logrus.Errorf("spawnvm return error")
+			outputChannel <- nil
+			return
+		}
+
+		manager.mutex.Lock()
+		defer manager.mutex.Unlock()
+
+		vmPtr := &VM{
+			Machine: machine,
+			Id:      id,
+			State:   StateActive,
+			cancel:  cancelFunc,
+			data: MachineData{
+				Id: id,
+				Name: "placeholder",
+				CreationTime: time.Now(),
+			}}
+
+		manager.VMs[id] = vmPtr
+		outputChannel <- &vmPtr.data
+	}()
+	
+	return outputChannel, nil
 }
 
 func (manager *VMManager) PauseVM(id MachineUUID) {
@@ -86,7 +114,7 @@ func (manager *VMManager) PauseVM(id MachineUUID) {
 }
 
 func (manager *VMManager) ResumeVM(id MachineUUID) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second * 5)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
 
 	go func(ctx context.Context, cancelFunc context.CancelFunc, manager *VMManager, id MachineUUID) {
 		defer cancelFunc()
@@ -94,12 +122,12 @@ func (manager *VMManager) ResumeVM(id MachineUUID) {
 		vmPtr := manager.VMs[id]
 		if vmPtr.State != StatePaused {
 			logrus.Errorf("machine not paused, cannot be resumed, id %s", id.String())
-			return 
+			return
 		}
 		err := vmPtr.Machine.PauseVM(ctx)
 		if err != nil {
 			logrus.Errorf("resume vm error")
-			return 
+			return
 		}
 
 		vmPtr.State = StateActive

@@ -17,7 +17,7 @@ func NewJwt(id app.MachineUUID, secretKey string) (string, error) {
 			"iat": time.Now().Unix(),
 		})
 
-	tokenStr, err := token.SignedString(secretKey)
+	tokenStr, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		logrus.Errorf("new jwt signedstring failed: %v", err)
 		return "", err

@@ -32,6 +32,7 @@ func InstallSignalHandlers(manager *VMManager) {
 					logrus.Errorf("An error occurred while stopping Firecracker VMM: %v", err)
 				}
 			case s == syscall.SIGQUIT:
+				// FIXME: force shutdown
 				logrus.Printf("Caught signal: %s, forcing shutdown", s.String())
 				// if err := m.StopVMM(); err != nil {
 				// 	logrus.Errorf("An error occurred while stopping Firecracker VMM: %v", err)

@@ -3,8 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/tongshengw/nimbus/backend/sectionleader/internal/app"
+	"github.com/tongshengw/nimbus/backend/sectionleader/internal/constants"
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/middle"
 )
 
@@ -17,14 +20,29 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 	}
 	vmManager := data.Manager
 
-	id, err := vmManager.CreateVM()
+	outputChan, err := vmManager.CreateVM()
 	if err != nil {
 		logrus.Errorf("create vm failed: %v", err)
 		http.Error(w, "Failed to create VM", http.StatusInternalServerError)
 		return
 	}
-	
-	tokenStr, err := middle.NewJwt(id, data.SecretKey)
+
+	var createMachineRes *app.MachineData
+
+	select {
+	case createMachineRes = <-outputChan:
+		if createMachineRes == nil {
+			logrus.Errorf("create vm returned nil data pointer")
+			http.Error(w, "Failed to create VM", http.StatusInternalServerError)
+			return
+		}
+	case <-time.After(constants.CreateVmTimeout):
+		logrus.Errorf("create machine timed out")
+		http.Error(w, "timed out creating VM", http.StatusInternalServerError)
+		return
+	}
+
+	tokenStr, err := middle.NewJwt(createMachineRes.Id, data.SecretKey)
 	if err != nil {
 		logrus.Errorf("new jwt failed: %v", err)
 		http.Error(w, "Failed to create token", http.StatusInternalServerError)
@@ -32,16 +50,18 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := struct {
-		MachineId string `json:"machine-id"`
+		MachineId string `json:"machine_id"`
+		MachineName string `json:"machine_name"`
 		Token     string `json:"token"`
 	}{
-		MachineId: id.String(),
-		Token:    tokenStr,
+		MachineId: createMachineRes.Id.String(),
+		MachineName: createMachineRes.Name,
+		Token:     tokenStr,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(response)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 func StopMachine(w http.ResponseWriter, r *http.Request) {
