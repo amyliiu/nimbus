@@ -37,7 +37,6 @@ type vmFilePaths struct {
 
 func SpawnNewVM() (*firecracker.Machine, MachineUUID, context.CancelFunc, error) {
 	id := MachineUUID(uuid.New())
-	fmt.Println("Creating new VM, UUID:", id.String())
 
 	vmPaths, err := createVMFolder(id)
 	if err != nil {

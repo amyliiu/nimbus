@@ -37,9 +37,11 @@ func main() {
 		}
 
 		if cmd == "run" {
-			err := vmManager.CreateVM()
+			id, err := vmManager.CreateVM()
+			fmt.Printf("Created VM with ID: %s\n", id.String())
+
 			if err != nil {
-				logrus.Errorf("createvm failed")
+				logrus.Errorf("createvm failed: %v", err)
 			}
 		}
 	}
