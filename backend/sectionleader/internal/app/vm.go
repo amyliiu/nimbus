@@ -37,14 +37,14 @@ func NewVMManager() *VMManager {
 	}
 }
 
-func (manager *VMManager) CreateVM() error {
+func (manager *VMManager) CreateVM() (MachineUUID, error) {
 	machine, id, cancelFunc, err := SpawnNewVM()
 	if err != nil {
 		logrus.Errorf("failed to spawn VM: %v", err)
-		return err
+		return MachineUUID{}, err
 	}
 	if cancelFunc == nil || machine == nil {
-		return fmt.Errorf("spawnvm return error")
+		return MachineUUID{}, fmt.Errorf("spawnvm return error")
 	}
 	vmPtr := &VM{
 		Machine: machine,
@@ -57,7 +57,7 @@ func (manager *VMManager) CreateVM() error {
 	defer manager.mutex.Unlock()
 
 	manager.VMs[id] = vmPtr
-	return nil
+	return id, nil
 }
 
 func (manager *VMManager) PauseVM(id MachineUUID) {

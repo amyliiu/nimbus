@@ -11,8 +11,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var SecretKey string
-
 func main() {
 	logFile, err := os.OpenFile("server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
@@ -25,7 +23,7 @@ func main() {
 		logrus.Fatalf("failed to load .env: %v", err)
 	}
 	
-	SecretKey = os.Getenv("SECRET_KEY")
+	secretKey := os.Getenv("SECRET_KEY")
 
 	vmManager := app.NewVMManager()
 	app.InstallSignalHandlers(vmManager)
@@ -39,9 +37,15 @@ func main() {
 	mux.Handle("/private/", http.StripPrefix("/private", middle.CheckJwt(privateMux)))
 	
     logrus.Println("Starting server on :8080")
+	
+	commonContextData := middle.CommonContextData{
+		Manager: vmManager,
+		SecretKey: secretKey,
+	}
+	
 	server := http.Server{
 		Addr: ":8080"	,
-		Handler: middle.LogRequest(mux),
+		Handler: middle.LogRequest(middle.WithData(commonContextData, mux)),
 	}
 	err = server.ListenAndServe()
     if err != nil {
