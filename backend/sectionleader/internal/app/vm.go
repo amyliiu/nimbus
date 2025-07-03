@@ -36,6 +36,7 @@ type VM struct {
 type VMManager struct {
 	mutex         sync.Mutex
 	createVmMutex sync.Mutex
+	idNameMap     *IdNameMap
 	VMs           map[MachineUUID]*VM
 }
 
@@ -43,6 +44,7 @@ func NewVMManager() *VMManager {
 	return &VMManager{
 		mutex:         sync.Mutex{},
 		createVmMutex: sync.Mutex{},
+		idNameMap:     NewIdNameMap(),
 		VMs:           make(map[MachineUUID]*VM),
 	}
 }
@@ -71,6 +73,12 @@ func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
 
 		manager.mutex.Lock()
 		defer manager.mutex.Unlock()
+		
+		vmName, err := manager.idNameMap.GenerateNewName(id)
+		if err != nil {
+			logrus.Errorf("could not generate name for new vm: %v", err)
+			return 
+		}
 
 		vmPtr := &VM{
 			Machine: machine,
@@ -79,7 +87,7 @@ func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
 			cancel:  cancelFunc,
 			data: MachineData{
 				Id:           id,
-				Name:         "placeholder",
+				Name:         vmName,
 				LocalIp:      ip,
 				CreationTime: time.Now(),
 			}}
