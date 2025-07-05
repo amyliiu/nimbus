@@ -3,6 +3,7 @@ module github.com/tongshengw/nimbus/backend/sectionleader
 go 1.24.3
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0

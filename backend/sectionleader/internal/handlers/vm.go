@@ -48,6 +48,15 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create token", http.StatusInternalServerError)
 		return
 	}
+	
+	// modify frp config
+	// FIXME: change port to real port
+	err = CreateTomlFrpcConfig(createMachineRes, 8001)
+	if err != nil {
+		logrus.Errorf("create toml frpc config failed: %v", err)
+	}
+
+	// modiify aws network rules
 
 	response := struct {
 		MachineId   string `json:"machine_id"`
@@ -65,6 +74,7 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
 
 func StopMachine(w http.ResponseWriter, r *http.Request) {
 
