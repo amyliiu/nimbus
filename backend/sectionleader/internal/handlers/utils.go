@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"bytes"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/BurntSushi/toml"
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/app"
@@ -11,19 +11,19 @@ import (
 )
 
 type proxyConfig struct {
-	Name       string
-	ConnType   string
-	LocalIp    net.IP
-	LocalPort  int
-	RemotePort int
+	Name       string `toml:"name"`
+	ConnType   string `toml:"type"`
+	LocalIp    net.IP `toml:"localIP"`
+	LocalPort  int    `toml:"localPort"`
+	RemotePort int    `toml:"remotePort"`
 }
 
 type frpcConfig struct {
-	Proxies []proxyConfig
+	Proxies []proxyConfig `toml:"proxies"`
 }
 
-func CreateTomlFrpcConfig(data *app.MachineData, remotePort int) error {
-	if remotePort < constants.MinRemotePort || remotePort > constants.MaxRemotePort {
+func CreateTomlFrpcConfig(data *app.MachineData) error {
+	if data.RemotePort < constants.MinRemotePort || data.RemotePort > constants.MaxRemotePort {
 		return fmt.Errorf("port requested outside allowed port range")
 	}
 	cfg := proxyConfig{
@@ -31,22 +31,28 @@ func CreateTomlFrpcConfig(data *app.MachineData, remotePort int) error {
 		ConnType:   "tcp",
 		LocalIp:    data.LocalIp.IP,
 		LocalPort:  22,
-		RemotePort: remotePort,
+		RemotePort: data.RemotePort,
 	}
 
 	proxiesConfig := frpcConfig{
 		Proxies: []proxyConfig{cfg},
 	}
-	
-	strRes := bytes.Buffer{}
 
-	err := toml.NewEncoder(&strRes).Encode(proxiesConfig)
+	err := os.MkdirAll(constants.FrpcConfigDir, 0755)
 	if err != nil {
 		return err
 	}
-	
-	// FIXME: change to write to file
-	fmt.Printf("%v", strRes.String())
-	
+
+	file, err := os.Create(constants.FrpcConfigDir + "/" + data.Id.String() + ".toml")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	err = toml.NewEncoder(file).Encode(proxiesConfig)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

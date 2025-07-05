@@ -48,10 +48,10 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to create token", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// modify frp config
 	// FIXME: change port to real port
-	err = CreateTomlFrpcConfig(createMachineRes, 8001)
+	err = CreateTomlFrpcConfig(createMachineRes)
 	if err != nil {
 		logrus.Errorf("create toml frpc config failed: %v", err)
 	}
@@ -63,18 +63,19 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 		MachineName string `json:"machine_name"`
 		LocalIp     string `json:"local_ip"`
 		Token       string `json:"token"`
+		RemotePort  int    `json:"remote-port"`
 	}{
 		MachineId:   createMachineRes.Id.String(),
 		MachineName: createMachineRes.Name,
 		LocalIp:     createMachineRes.LocalIp.IP.String(),
 		Token:       tokenStr,
+		RemotePort:  createMachineRes.RemotePort,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
-
 
 func StopMachine(w http.ResponseWriter, r *http.Request) {
 

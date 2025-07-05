@@ -1,3 +1,4 @@
 #!/bin/bash
-make
 rm -f server.log
+rm -rf /home/tswu/frpc/nimbus
+rm -rf _data/

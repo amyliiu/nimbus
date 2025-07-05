@@ -22,6 +22,7 @@ type MachineData struct {
 	Id           MachineUUID
 	Name         string
 	LocalIp      net.IPNet
+	RemotePort   int
 	CreationTime time.Time
 }
 
@@ -73,11 +74,11 @@ func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
 
 		manager.mutex.Lock()
 		defer manager.mutex.Unlock()
-		
+
 		vmName, err := manager.idNameMap.GenerateNewName(id)
 		if err != nil {
 			logrus.Errorf("could not generate name for new vm: %v", err)
-			return 
+			return
 		}
 
 		vmPtr := &VM{
@@ -90,6 +91,7 @@ func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
 				Name:         vmName,
 				LocalIp:      ip,
 				CreationTime: time.Now(),
+				RemotePort: 8000 + len(manager.VMs),
 			}}
 
 		manager.VMs[id] = vmPtr
