@@ -49,7 +49,7 @@ func GenerateCniConfFile(id MachineUUID) (string, error) {
 		return "", fmt.Errorf("ran out of subnet IDs")
 	}
 
-	subnet := fmt.Sprintf("192.168.%d.0/24", subnetID)
+	subnet := fmt.Sprintf("192.168.%d.0/30", subnetID)
 	config := CNIConfig{
 		CNIVersion: "0.4.0",
 		Name:       fmt.Sprintf("fcnet-%s", vmID),

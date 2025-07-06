@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"sync"
 	"time"
 
 	firecracker "github.com/firecracker-microvm/firecracker-go-sdk"
 	"github.com/sirupsen/logrus"
+	"github.com/tongshengw/nimbus/backend/sectionleader/internal/constants"
 )
 
 type VMState int
@@ -91,7 +93,7 @@ func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
 				Name:         vmName,
 				LocalIp:      ip,
 				CreationTime: time.Now(),
-				RemotePort: 8000 + len(manager.VMs),
+				RemotePort:   constants.MinRemotePort + len(manager.VMs),
 			}}
 
 		manager.VMs[id] = vmPtr
@@ -147,11 +149,14 @@ func (manager *VMManager) ResumeVM(id MachineUUID) {
 	}(ctx, cancelFunc, manager, id)
 }
 
-func (manager *VMManager) GracefulShutdownVM(id MachineUUID) {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
+func (manager *VMManager) GracefulShutdownVM(id MachineUUID) <-chan bool {
+	ctx, cancelFunc := context.WithTimeout(context.Background(), constants.DefaultTimeout)
+	logrus.Infof("requested machine %s shutdown", id.String())
+	outputChan := make(chan bool)
 
-	go func(ctx context.Context, cancelFunc context.CancelFunc, manager *VMManager, id MachineUUID) {
+	go func() {
 		defer cancelFunc()
+		defer close(outputChan)
 
 		manager.mutex.Lock()
 		defer manager.mutex.Unlock()
@@ -165,17 +170,42 @@ func (manager *VMManager) GracefulShutdownVM(id MachineUUID) {
 		}
 
 		vmPtr.State = StateStopped
-		err := vmPtr.Machine.Shutdown(context.Background())
+		err := vmPtr.Machine.Shutdown(ctx)
 		if err != nil {
 			logrus.Errorf("machine shutdown err, id: %s, err %v, forcing shutdown", id.String(), err)
+			if forceErr := vmPtr.Machine.StopVMM(); forceErr != nil {
+				logrus.Errorf("force shutdown failed, id: %s, err %v", id.String(), forceErr)
+				outputChan <- false
+				return
+			}
 			return
 		}
-	}(ctx, cancelFunc, manager, id)
+
+		outputChan <- true
+		logrus.Infof("machine %s successfully shut down", id.String())
+	}()
+
+	return outputChan
 }
 
 func (manager *VMManager) GracefulShutdownAll() error {
+	shutdownChans := make([]<-chan bool, len(manager.VMs))
+
+	counter := 0
 	for id := range manager.VMs {
-		manager.GracefulShutdownVM(id)
+		shutdownChans[counter] = manager.GracefulShutdownVM(id)
+		counter++
 	}
+
+	for _, c := range shutdownChans {
+		select {
+		case <-time.After(constants.DefaultTimeout):
+			logrus.Errorf("vm shutdown timeout")
+			return fmt.Errorf("vm shutdown timeout")
+		case <-c:
+			// correct, proceed
+		}
+	}
+
 	return nil
 }

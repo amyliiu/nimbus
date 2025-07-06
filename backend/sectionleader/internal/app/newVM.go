@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"os/exec"
@@ -54,7 +55,7 @@ func SpawnNewVM(ctx context.Context) (*firecracker.Machine, MachineUUID, net.IPN
 	}
 	defer opts.Close()
 
-	machine, err := setupFirecrackerMachine(opts)
+	machine, err := setupFirecrackerMachine(ctx, opts)
 	if err != nil {
 		return nil, id, net.IPNet{},err
 	}
@@ -166,7 +167,7 @@ func runFirecrackerMachine(ctx context.Context, m *firecracker.Machine, ch chan<
 }
 
 // Run a vmm with a given set of options
-func setupFirecrackerMachine(opts *options) (*firecracker.Machine, error) {
+func setupFirecrackerMachine(ctx context.Context, opts *options) (*firecracker.Machine, error) {
 	// convert options to a firecracker config
 	fcCfg, err := opts.getFirecrackerConfig()
 	if err != nil {
@@ -218,15 +219,23 @@ func setupFirecrackerMachine(opts *options) (*firecracker.Machine, error) {
 		cmd := firecracker.VMCommandBuilder{}.
 			WithBin(firecrackerBinary).
 			WithSocketPath(fcCfg.SocketPath).
-			// WithStdin(os.Stdin).
 			WithStdout(stdoutFile).
 			WithStderr(stderrFile).
-			Build(context.Background())
+			// reads nothing
+			WithStdin(strings.NewReader("")).
+			Build(ctx)
+		
+		// if cmd.SysProcAttr == nil {
+		// 	cmd.SysProcAttr = &syscall.SysProcAttr{
+		// 		Setpgid:    true,
+		// 		Pgid:       0,
+		// 	}
+		// }
 
 		machineOpts = append(machineOpts, firecracker.WithProcessRunner(cmd))
 	}
 
-	m, err := firecracker.NewMachine(context.Background(), fcCfg, machineOpts...)
+	m, err := firecracker.NewMachine(ctx, fcCfg, machineOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating machine: %s", err)
 	}
