@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 
 	"github.com/BurntSushi/toml"
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/app"
@@ -52,6 +53,12 @@ func CreateTomlFrpcConfig(data *app.MachineData) error {
 	err = toml.NewEncoder(file).Encode(proxiesConfig)
 	if err != nil {
 		return err
+	}
+
+	cmd := exec.Command("su", "tswu", "-c", constants.RefreshFrpcPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("reload frpc error, err: %v output: %s", err, output)
 	}
 
 	return nil

@@ -54,6 +54,8 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 	err = CreateTomlFrpcConfig(createMachineRes)
 	if err != nil {
 		logrus.Errorf("create toml frpc config failed: %v", err)
+		http.Error(w, "Failed to create reverse proxy config", http.StatusInternalServerError)
+		return
 	}
 
 	// modiify aws network rules
@@ -64,12 +66,14 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 		LocalIp     string `json:"local_ip"`
 		Token       string `json:"token"`
 		RemotePort  int    `json:"remote-port"`
+		RemoteIp    string `json:"remote-ip"`
 	}{
 		MachineId:   createMachineRes.Id.String(),
 		MachineName: createMachineRes.Name,
 		LocalIp:     createMachineRes.LocalIp.IP.String(),
 		Token:       tokenStr,
 		RemotePort:  createMachineRes.RemotePort,
+		RemoteIp:    constants.PublicIp.String(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
