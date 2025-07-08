@@ -36,6 +36,7 @@ func main() {
 	mux.Handle("POST /new-machine", http.HandlerFunc(handlers.NewMachine))
 
 	privateMux := http.NewServeMux()
+	privateMux.Handle("GET /ssh-key", http.HandlerFunc(handlers.SshKey))
 	privateMux.Handle("POST /stop-machine", http.HandlerFunc(handlers.StopMachine))
 
 	mux.Handle("/private/", http.StripPrefix("/private", middle.CheckJwt(privateMux)))

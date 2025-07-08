@@ -9,6 +9,7 @@ import (
 
 type ContextKey string
 const CommonContextDataKey ContextKey = "request-data"
+const MachineIdContextDataKey ContextKey = "user-machine-id"
 
 type CommonContextData struct {
 	Manager *app.VMManager

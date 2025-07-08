@@ -50,15 +50,12 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// modify frp config
-	// FIXME: change port to real port
 	err = CreateTomlFrpcConfig(createMachineRes)
 	if err != nil {
 		logrus.Errorf("create toml frpc config failed: %v", err)
 		http.Error(w, "Failed to create reverse proxy config", http.StatusInternalServerError)
 		return
 	}
-
-	// modiify aws network rules
 
 	response := struct {
 		MachineId   string `json:"machine_id"`
@@ -79,6 +76,20 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
+}
+
+func SshKey(w http.ResponseWriter, r *http.Request) {
+	val := r.Context().Value(middle.MachineIdContextDataKey)
+	logrus.Infof("value in context: %v, type: %T", val, val)
+
+	machineId, ok := val.(app.MachineUUID)
+	if !ok {
+		logrus.Errorf("machine uuid data not ok")
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write([]byte(machineId.String()))
 }
 
 func StopMachine(w http.ResponseWriter, r *http.Request) {
