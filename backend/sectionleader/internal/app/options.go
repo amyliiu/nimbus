@@ -34,8 +34,8 @@ func newOptions() *options {
 }
 
 type options struct {
-	FcStdoutPath	   string   `long:"stdout" description:"Path to write stdout, defaults to /dev/stdout"`
-	FcStderrPath	   string   `long:"stderr" description:"Path to write stderr, defaults to /dev/stderr"`
+	FcStdoutPath string `long:"stdout" description:"Path to write stdout, defaults to /dev/stdout"`
+	FcStderrPath string `long:"stderr" description:"Path to write stderr, defaults to /dev/stderr"`
 
 	CniNetworkName     string   `long:"cni-network-name" description:"CNI network name, must match the 'name' field in /etc/cni/conf.d/fcnet.conflist"`
 	FcBinary           string   `long:"firecracker-binary" description:"Path to firecracker binary"`
@@ -46,19 +46,19 @@ type options struct {
 	FcRootPartUUID     string   `long:"root-partition" description:"Root partition UUID"`
 	FcAdditionalDrives []string `long:"add-drive" description:"Path to additional drive, suffixed with :ro or :rw, can be specified multiple times"`
 	// FcNicConfig        []string `long:"tap-device" description:"NIC info, specified as DEVICE/MAC, can be specified multiple times"`
-	FcVsockDevices     []string `long:"vsock-device" description:"Vsock interface, specified as PATH:CID. Multiple OK"`
-	FcLogFifo          string   `long:"vmm-log-fifo" description:"FIFO for firecracker logs"`
-	FcLogLevel         string   `long:"log-level" description:"vmm log level" default:"Debug"`
-	FcMetricsFifo      string   `long:"metrics-fifo" description:"FIFO for firecracker metrics"`
-	FcDisableSmt       bool     `long:"disable-smt" short:"t" description:"Disable CPU Simultaneous Multithreading"`
-	FcCPUCount         int64    `long:"ncpus" short:"c" description:"Number of CPUs" default:"1"`
-	FcCPUTemplate      string   `long:"cpu-template" description:"Firecracker CPU Template (C3 or T2)"`
-	FcMemSz            int64    `long:"memory" short:"m" description:"VM memory, in MiB" default:"512"`
+	FcVsockDevices []string `long:"vsock-device" description:"Vsock interface, specified as PATH:CID. Multiple OK"`
+	FcLogFifo      string   `long:"vmm-log-fifo" description:"FIFO for firecracker logs"`
+	FcLogLevel     string   `long:"log-level" description:"vmm log level" default:"Debug"`
+	FcMetricsFifo  string   `long:"metrics-fifo" description:"FIFO for firecracker metrics"`
+	FcDisableSmt   bool     `long:"disable-smt" short:"t" description:"Disable CPU Simultaneous Multithreading"`
+	FcCPUCount     int64    `long:"ncpus" short:"c" description:"Number of CPUs" default:"1"`
+	FcCPUTemplate  string   `long:"cpu-template" description:"Firecracker CPU Template (C3 or T2)"`
+	FcMemSz        int64    `long:"memory" short:"m" description:"VM memory, in MiB" default:"512"`
 	// FcMetadata         string   `long:"metadata" description:"Firecracker Metadata for MMDS (json)"`
-	FcFifoLogFile      string   `long:"firecracker-log" short:"l" description:"pipes the fifo contents to the specified file"`
-	FcSocketPath       string   `long:"socket-path" short:"s" description:"path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}"`
-	Debug              bool     `long:"debug" short:"d" description:"Enable debug output"`
-	Version            bool     `long:"version" description:"Outputs the version of the application"`
+	FcFifoLogFile string `long:"firecracker-log" short:"l" description:"pipes the fifo contents to the specified file"`
+	FcSocketPath  string `long:"socket-path" short:"s" description:"path to use for firecracker socket, defaults to a unique file in in the first existing directory from {$HOME, $TMPDIR, or /tmp}"`
+	Debug         bool   `long:"debug" short:"d" description:"Enable debug output"`
+	Version       bool   `long:"version" description:"Outputs the version of the application"`
 
 	Id           string `long:"id" description:"Jailer VMM id"`
 	ExecFile     string `long:"exec-file" description:"Jailer executable"`
@@ -71,7 +71,7 @@ type options struct {
 	ChrootBaseDir string `long:"chroot-base-dir" description:"Jailer chroot base directory"`
 	Daemonize     bool   `long:"daemonize" description:"Run jailer as daemon"`
 
-	closers       []func() error
+	closers []func() error
 	// validMetadata interface{}
 
 	createFifoFileLogs func(fifoPath string) (*os.File, error)
@@ -162,6 +162,7 @@ func (opts *options) getFirecrackerConfig() (firecracker.Config, error) {
 		Drives:            blockDevices,
 		NetworkInterfaces: CniNetworkConf,
 		VsockDevices:      vsocks,
+		ForwardSignals:    []os.Signal{os.Kill},
 		MachineCfg: models.MachineConfiguration{
 			VcpuCount:   firecracker.Int64(opts.FcCPUCount),
 			CPUTemplate: models.CPUTemplate(opts.FcCPUTemplate),

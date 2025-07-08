@@ -79,17 +79,40 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 }
 
 func SshKey(w http.ResponseWriter, r *http.Request) {
-	val := r.Context().Value(middle.MachineIdContextDataKey)
-	logrus.Infof("value in context: %v, type: %T", val, val)
-
-	machineId, ok := val.(app.MachineUUID)
+	machineId, ok := r.Context().Value(middle.MachineIdContextDataKey).(app.MachineUUID)
 	if !ok {
 		logrus.Errorf("machine uuid data not ok")
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	w.Write([]byte(machineId.String()))
+	data, ok := r.Context().Value(middle.CommonContextDataKey).(middle.CommonContextData)
+	if !ok {
+		logrus.Errorf("common context data not ok: %v", data)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	vmManager := data.Manager
+	
+	key, err := vmManager.GetSshKey(machineId)
+	if err != nil {
+		logrus.Errorf("could not load machine ssh key, %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	machineDisplayName, err := vmManager.IdNameMap.GetName(machineId)
+	if err != nil {
+		logrus.Errorf("common context data not ok: %v", data)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	
+
+	w.Header().Set("Content-Type", "application/txt")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"" + machineDisplayName + "_ssh_key\"")
+	
+	w.Write(key)
 }
 
 func StopMachine(w http.ResponseWriter, r *http.Request) {

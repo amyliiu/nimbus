@@ -23,8 +23,6 @@ const (
 	refSquashFsPath = "./_ref/squashfs"
 	refImgPath      = "./_ref/vmlinux"
 
-	dataDirPath = "./_data"
-
 	// executableMask is the mask needed to check whether or not a file's
 	// permissions are executable.
 	executableMask         = 0111
@@ -79,7 +77,7 @@ func SpawnNewVM(ctx context.Context) (*firecracker.Machine, MachineUUID, net.IPN
 }
 
 func createVMFolder(id MachineUUID) (vmFilePaths, error) {
-	dstRootPath := dataDirPath + "/" + id.String()
+	dstRootPath := constants.DataDirPath + "/" + id.String()
 	err := os.MkdirAll(dstRootPath, 0755)
 	if err != nil {
 		logrus.Fatal(err)

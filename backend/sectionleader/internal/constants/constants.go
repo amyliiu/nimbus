@@ -16,6 +16,8 @@ const (
 
 	MinRemotePort = 8000
 	MaxRemotePort = 9000
+
+	DataDirPath = "./_data"
 )
 
 var PublicIp net.IP = net.ParseIP("18.119.116.39")

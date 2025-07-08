@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -39,7 +40,7 @@ type VM struct {
 type VMManager struct {
 	mutex         sync.Mutex
 	createVmMutex sync.Mutex
-	idNameMap     *IdNameMap
+	IdNameMap     *IdNameMap
 	VMs           map[MachineUUID]*VM
 }
 
@@ -47,7 +48,7 @@ func NewVMManager() *VMManager {
 	return &VMManager{
 		mutex:         sync.Mutex{},
 		createVmMutex: sync.Mutex{},
-		idNameMap:     NewIdNameMap(),
+		IdNameMap:     NewIdNameMap(),
 		VMs:           make(map[MachineUUID]*VM),
 	}
 }
@@ -77,7 +78,7 @@ func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
 		manager.mutex.Lock()
 		defer manager.mutex.Unlock()
 
-		vmName, err := manager.idNameMap.GenerateNewName(id)
+		vmName, err := manager.IdNameMap.GenerateNewName(id)
 		if err != nil {
 			logrus.Errorf("could not generate name for new vm: %v", err)
 			return
@@ -208,4 +209,17 @@ func (manager *VMManager) GracefulShutdownAll() error {
 	}
 
 	return nil
+}
+
+func(manager *VMManager) GetSshKey(id MachineUUID) ([]byte, error) {
+	if _, ok := manager.VMs[id]; !ok {
+		return nil, fmt.Errorf("machine does not exist")
+	}
+	
+	key, err := os.ReadFile(constants.DataDirPath + "/" + id.String() + "/id_rsa")
+	if err != nil {
+		return nil, err
+	}
+	
+	return key, nil
 }

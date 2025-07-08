@@ -77,7 +77,5 @@ func CheckJwt(next http.Handler) http.Handler {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
-
-		next.ServeHTTP(w, r)
 	})
 }
