@@ -151,7 +151,7 @@ func (manager *VMManager) ResumeVM(id MachineUUID) {
 }
 
 func (manager *VMManager) GracefulShutdownVM(id MachineUUID) <-chan bool {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), constants.DefaultTimeout)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), constants.DefaultTimeout * 5)
 	logrus.Infof("requested machine %s shutdown", id.String())
 	outputChan := make(chan bool)
 
@@ -163,7 +163,6 @@ func (manager *VMManager) GracefulShutdownVM(id MachineUUID) <-chan bool {
 		defer manager.mutex.Unlock()
 
 		vmPtr := manager.VMs[id]
-		defer vmPtr.cancel()
 
 		if vmPtr.State == StateStopped {
 			logrus.Errorf("attempted to shutdown stopped machine, id: %s", id.String())
@@ -200,26 +199,26 @@ func (manager *VMManager) GracefulShutdownAll() error {
 
 	for _, c := range shutdownChans {
 		select {
-		case <-time.After(constants.DefaultTimeout):
+		case <-time.After(constants.DefaultTimeout * 5):
 			logrus.Errorf("vm shutdown timeout")
 			return fmt.Errorf("vm shutdown timeout")
 		case <-c:
 			// correct, proceed
 		}
 	}
-
+	
 	return nil
 }
 
-func(manager *VMManager) GetSshKey(id MachineUUID) ([]byte, error) {
+func (manager *VMManager) GetSshKey(id MachineUUID) ([]byte, error) {
 	if _, ok := manager.VMs[id]; !ok {
 		return nil, fmt.Errorf("machine does not exist")
 	}
-	
+
 	key, err := os.ReadFile(constants.DataDirPath + "/" + id.String() + "/id_rsa")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return key, nil
 }

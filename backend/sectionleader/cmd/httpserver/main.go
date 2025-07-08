@@ -34,6 +34,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("POST /new-machine", http.HandlerFunc(handlers.NewMachine))
+	mux.Handle("POST /shutdown-all", http.HandlerFunc(handlers.ShutdownAll))
 
 	privateMux := http.NewServeMux()
 	privateMux.Handle("GET /ssh-key", http.HandlerFunc(handlers.SshKey))

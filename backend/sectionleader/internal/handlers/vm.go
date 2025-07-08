@@ -93,7 +93,7 @@ func SshKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vmManager := data.Manager
-	
+
 	key, err := vmManager.GetSshKey(machineId)
 	if err != nil {
 		logrus.Errorf("could not load machine ssh key, %v", err)
@@ -107,12 +107,39 @@ func SshKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	
 
 	w.Header().Set("Content-Type", "application/txt")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"" + machineDisplayName + "_ssh_key\"")
-	
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+machineDisplayName+"_ssh_key\"")
+
 	w.Write(key)
+}
+
+func ShutdownAll(w http.ResponseWriter, r *http.Request) {
+	data, ok := r.Context().Value(middle.CommonContextDataKey).(middle.CommonContextData)
+	if !ok {
+		logrus.Errorf("common context data not ok: %v", data)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	vmManager := data.Manager
+
+	type requestData struct {
+		SecretKey string `json:"secret_key"`
+	}
+	
+	var reqData requestData
+	err := json.NewDecoder(r.Body).Decode(&reqData)
+	if err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	
+	if reqData.SecretKey != data.SecretKey {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	vmManager.GracefulShutdownAll()
 }
 
 func StopMachine(w http.ResponseWriter, r *http.Request) {
