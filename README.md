@@ -5,6 +5,7 @@
 - [x] frpc setup
 - [x] api to control vms
 - [ ] switch to jailer
+- [ ] port forwarding
 - [ ] change auth to work with frontends/wrappers
 - [ ] add a db
 - [ ] testing newly provisioned machines accessible
