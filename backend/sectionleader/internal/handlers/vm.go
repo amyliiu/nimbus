@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -70,7 +71,7 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 		LocalIp:     createMachineRes.LocalIp.IP.String(),
 		Token:       tokenStr,
 		RemotePort:  createMachineRes.RemotePort,
-		RemoteIp:    constants.PublicIp.String(),
+		RemoteIp:    constants.PublicIpStr,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -103,13 +104,13 @@ func SshKey(w http.ResponseWriter, r *http.Request) {
 
 	machineDisplayName, err := vmManager.IdNameMap.GetName(machineId)
 	if err != nil {
-		logrus.Errorf("common context data not ok: %v", data)
+		logrus.Errorf("could not convert to machinedisplayid: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/txt")
-	w.Header().Set("Content-Disposition", "attachment; filename=\""+machineDisplayName+"_ssh_key\"")
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s_ssh_key"`, machineDisplayName))
 
 	w.Write(key)
 }

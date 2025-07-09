@@ -1,11 +1,14 @@
 package app
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/sirupsen/logrus"
+	"github.com/tongshengw/nimbus/backend/sectionleader/internal/constants"
 )
 
 const CniConfRootDir = "/etc/cni/conf.d"
@@ -31,25 +34,26 @@ type CNIConfig struct {
 	Plugins    []Plugin `json:"plugins"`
 }
 
-var usedSubnets map[uint8]struct{} = make(map[uint8]struct{})
+var nextSubnet net.IP = net.ParseIP(constants.CniFirstSubnetStr).To4()
 
 // returns name of the config generated
 func GenerateCniConfFile(id MachineUUID) (string, error) {
 	vmID := id.String()
-	// generate unused subnet id
-	subnetID := uint8(0)
-	for i := uint8(1); i <= 254; i++ {
-		if _, used := usedSubnets[i]; !used {
-			subnetID = i
-			usedSubnets[i] = struct{}{}
-			break
-		}
-	}
-	if subnetID == 0 {
+	if nextSubnet.Equal(net.ParseIP(constants.CniLastSubnetStr).To4()) {
 		return "", fmt.Errorf("ran out of subnet IDs")
 	}
+	
+	subnet := nextSubnet.String() + "/30"
 
-	subnet := fmt.Sprintf("192.168.%d.0/30", subnetID)
+	if nextSubnet.To4() == nil {
+		return "", fmt.Errorf("malformed next subnet ip")
+	}
+	subnetInt := binary.BigEndian.Uint32(nextSubnet.To4())
+	binary.BigEndian.PutUint32(nextSubnet, subnetInt + 4)
+
+	// FIXME:
+	logrus.Infof("HERE: %s", nextSubnet.String())
+
 	config := CNIConfig{
 		CNIVersion: "0.4.0",
 		Name:       fmt.Sprintf("fcnet-%s", vmID),

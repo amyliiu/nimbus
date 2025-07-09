@@ -1,7 +1,6 @@
 package constants
 
 import (
-	"net"
 	"time"
 )
 
@@ -18,6 +17,8 @@ const (
 	MaxRemotePort = 9000
 
 	DataDirPath = "./_data"
-)
 
-var PublicIp net.IP = net.ParseIP("18.119.116.39")
+	CniFirstSubnetStr = "192.168.1.0"
+	CniLastSubnetStr = "192.168.254.0"
+	PublicIpStr = "18.119.116.39"
+)
