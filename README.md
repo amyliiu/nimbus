@@ -4,6 +4,9 @@
 
 - [x] frpc setup
 - [x] api to control vms
+- [ ] switch to jailer
+- [ ] change auth to work with frontends/wrappers
+- [ ] add a db
 - [ ] testing newly provisioned machines accessible
 - [ ] MINECRAFT SERVER
 - [ ] frontend website
