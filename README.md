@@ -2,8 +2,9 @@
 
 ## TODO:
 
-- [ ] frpc setup
-- [ ] api to control vms
+- [x] frpc setup
+- [x] api to control vms
+- [ ] testing newly provisioned machines accessible
 - [ ] frontend website
 - [ ] pool to instantly provision
 
