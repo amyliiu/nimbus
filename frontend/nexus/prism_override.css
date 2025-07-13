@@ -1,0 +1,8 @@
+pre[class*="language-"] {
+  border: 1px solid #ccc;      /* Thinner border */
+  border-radius: 1rem;          /* Slight rounding */
+  padding: 0.5em;              /* Less padding */
+  font-size: 0.9em;            /* Smaller font */
+  background-color: #f8f8f8;   /* Optional: background tweak */
+  overflow-x: auto;            /* Scroll if too wide */
+}

@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/app"
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/handlers"
@@ -55,12 +56,19 @@ func main() {
 
 `
 	fmt.Print(splash)
+
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedHeaders: []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+	}).Handler(mux)
+
 	logrus.Println("Starting server on :7212")
 	fmt.Println("Starting server on :7212")
 
 	server := http.Server{
 		Addr:    ":7212",
-		Handler: middle.LogRequest(middle.WithData(commonContextData, mux)),
+		Handler: middle.LogRequest(middle.WithData(commonContextData, corsHandler)),
 	}
 	err = server.ListenAndServe()
 	if err != nil {
