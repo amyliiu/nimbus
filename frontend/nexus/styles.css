@@ -12,14 +12,14 @@ body {
 .container {
     text-align: center;
     padding: 2rem;
-    max-width: 100vb;
+    max-width: 50vw;
 }
 
 .code-snippet-container {
     padding-top: 2rem;
     display: flex;
     justify-content: center;
-    min-width:50vb;
+    display: none;
 }
 
 p {

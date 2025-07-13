@@ -63,8 +63,8 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 		MachineName string `json:"machine_name"`
 		LocalIp     string `json:"local_ip"`
 		Token       string `json:"token"`
-		RemotePort  int    `json:"remote-port"`
-		RemoteIp    string `json:"remote-ip"`
+		RemotePort  int    `json:"remote_port"`
+		RemoteIp    string `json:"remote_ip"`
 	}{
 		MachineId:   createMachineRes.Id.String(),
 		MachineName: createMachineRes.Name,

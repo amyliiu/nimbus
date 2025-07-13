@@ -18,25 +18,20 @@
 <body>
     <div class="container">
         <h1>Hi! Create a test virtual machine.</h1>
-        <button onclick="getNewMachine()">
-            Get Machine
+        <button disabled class="get-machine-button" onclick="getNewMachine()">
+            Server Offline
         </button>
 
         <div class="code-snippet-container">
-            <pre><code class="language-bash">
-# bash
-echo "Hello, World!"
-ls -l /home/user
+            <pre><code id="id-code-snippet-text" class="language-bash">
             </code></pre>
         </div>
 
         <p>
             This is a virtual machine manager with similar functionality to Amazon EC2. Try it out by creating a
-            temporary virtural machine! Created by Tongsheng Wu. <a href="">My Github</a>, <a href="">My LinkedIn</a>
+            temporary virtural machine! Created by Tongsheng Wu. <a href="https://github.com/tongshengw">My Github</a>, <a href="https://www.linkedin.com/in/tswu">My LinkedIn</a>
         </p>
     </div>
-
-    <script src="prism.js"></script>
 </body>
 
 </html>

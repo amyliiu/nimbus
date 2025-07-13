@@ -1,7 +1,31 @@
 let apiBase = "http://127.0.0.1:7212"
 
+document.addEventListener("DOMContentLoaded", async () => {
+    await fetch(apiBase + "/check-status", {
+        method: "GET",
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error("response err");
+        }
+        return response.json();
+    }).then(data => {
+        if (data['status'] == 'ok') {
+            const button = document.querySelector('.get-machine-button');
+            if (button) {
+                button.disabled = false;
+                button.textContent = 'Get Machine';
+            }
+        }
+    });
+});
+
 async function getNewMachine() {
-    console.log("getnewmachine");
+    const button = document.querySelector('.get-machine-button');
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Loading...';
+    }
+
     let newMachineResponse;
     await fetch(apiBase + "/new-machine", {
         method: "POST",
@@ -36,6 +60,20 @@ async function getNewMachine() {
     a.style.display = 'none';
     a.click();
     a.remove();
-
     URL.revokeObjectURL(blobUrl);
+
+    button.textContent = "Done!";
+
+    const codeSnippetContainer = document.querySelector('.code-snippet-container');
+    if (codeSnippetContainer) {
+        codeSnippetContainer.style.display = 'flex';
+    }
+    const codeSnippetText = document.getElementById('id-code-snippet-text');
+    if (codeSnippetText) {
+        codeSnippetText.textContent =
+            `
+chmod 600 ${newMachineResponse["machine_name"]}_ssh_key
+ssh -p ${newMachineResponse["remote_port"]} -i ${newMachineResponse["machine_name"]}_ssh_key root@${newMachineResponse["remote_ip"]}
+            `;
+    }
 }
