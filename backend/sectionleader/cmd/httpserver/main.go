@@ -55,11 +55,11 @@ func main() {
 
 `
 	fmt.Print(splash)
-	logrus.Println("Starting server on :8080")
-	fmt.Println("Starting server on :8080")
+	logrus.Println("Starting server on :7212")
+	fmt.Println("Starting server on :7212")
 
 	server := http.Server{
-		Addr:    ":8080",
+		Addr:    ":7212",
 		Handler: middle.LogRequest(middle.WithData(commonContextData, mux)),
 	}
 	err = server.ListenAndServe()
