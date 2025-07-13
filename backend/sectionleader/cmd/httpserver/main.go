@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/app"
 	"github.com/tongshengw/nimbus/backend/sectionleader/internal/handlers"
@@ -35,6 +36,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("POST /new-machine", http.HandlerFunc(handlers.NewMachine))
 	mux.Handle("POST /shutdown-all", http.HandlerFunc(handlers.ShutdownAll))
+	mux.Handle("GET /check-status", http.HandlerFunc(handlers.CheckStatus))
 
 	privateMux := http.NewServeMux()
 	privateMux.Handle("GET /ssh-key", http.HandlerFunc(handlers.SshKey))
@@ -55,12 +57,19 @@ func main() {
 
 `
 	fmt.Print(splash)
-	logrus.Println("Starting server on :8080")
-	fmt.Println("Starting server on :8080")
+
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedHeaders: []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+	}).Handler(mux)
+
+	logrus.Println("Starting server on :7212")
+	fmt.Println("Starting server on :7212")
 
 	server := http.Server{
-		Addr:    ":8080",
-		Handler: middle.LogRequest(middle.WithData(commonContextData, mux)),
+		Addr:    ":7212",
+		Handler: middle.LogRequest(middle.WithData(commonContextData, corsHandler)),
 	}
 	err = server.ListenAndServe()
 	if err != nil {

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nimbus</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/themes/prism.css" rel="stylesheet" />
+    <link rel="stylesheet" href="prism_override.css">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/prism.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-bash.min.js"></script>
+
+    <script src="index.js" defer></script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Hi! Create a test virtual machine.</h1>
+        <button disabled class="get-machine-button" onclick="getNewMachine()">
+            Server Offline
+        </button>
+
+        <div class="code-snippet-container">
+            <pre><code id="id-code-snippet-text" class="language-bash">
+            </code></pre>
+        </div>
+
+        <p>
+            This is a virtual machine manager with similar functionality to Amazon EC2. Try it out by creating a
+            temporary virtural machine! Created by Tongsheng Wu. <a href="https://github.com/tongshengw">My Github</a>, <a href="https://www.linkedin.com/in/tswu">My LinkedIn</a>
+        </p>
+    </div>
+</body>
+
+</html>
