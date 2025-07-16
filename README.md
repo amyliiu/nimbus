@@ -10,7 +10,7 @@
 - [ ] add a db
 - [ ] testing newly provisioned machines accessible
 - [ ] MINECRAFT SERVER
-- [ ] frontend website
+- [x] frontend website
 - [ ] pool to instantly provision
 
 ## bugs:
