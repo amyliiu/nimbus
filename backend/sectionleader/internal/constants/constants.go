@@ -16,6 +16,13 @@ const (
 	MinRemotePort = 8000
 	MaxRemotePort = 9000
 
+	// Port forwarding constants for VM internal port 25565
+	MinLocalForwardPort = 10000
+	MaxLocalForwardPort = 11000
+	MinGameRemotePort   = 12000
+	MaxGameRemotePort   = 13000
+	InternalGamePort    = 25565
+
 	DataDirPath = "./_data"
 
 	CniFirstSubnetStr = "192.168.1.0"

@@ -22,11 +22,13 @@ const (
 )
 
 type MachineData struct {
-	Id           MachineUUID
-	Name         string
-	LocalIp      net.IPNet
-	RemotePort   int
-	CreationTime time.Time
+	Id             MachineUUID
+	Name           string
+	LocalIp        net.IPNet
+	RemotePort     int     // SSH remote port (8000-9000 range)
+	LocalPort      int     // Local port for game forwarding (10000-11000 range)
+	GameRemotePort int     // Remote port for game access (12000-13000 range)
+	CreationTime   time.Time
 }
 
 type VM struct {
@@ -90,12 +92,21 @@ func (manager *VMManager) CreateVM() (<-chan *MachineData, error) {
 			State:   StateActive,
 			cancel:  cancelFunc,
 			data: MachineData{
-				Id:           id,
-				Name:         vmName,
-				LocalIp:      ip,
-				CreationTime: time.Now(),
-				RemotePort:   constants.MinRemotePort + len(manager.VMs),
+				Id:             id,
+				Name:           vmName,
+				LocalIp:        ip,
+				CreationTime:   time.Now(),
+				RemotePort:     constants.MinRemotePort + len(manager.VMs),
+				LocalPort:      constants.MinLocalForwardPort + len(manager.VMs),
+				GameRemotePort: constants.MinGameRemotePort + len(manager.VMs),
 			}}
+
+		// Set up iptables port forwarding for the game port
+		err = SetupPortForwarding(ip.IP, vmPtr.data.LocalPort)
+		if err != nil {
+			logrus.Errorf("failed to setup port forwarding for VM %s: %v", id.String(), err)
+			// Continue anyway - VM is created, just port forwarding failed
+		}
 
 		manager.VMs[id] = vmPtr
 		outputChannel <- &vmPtr.data
@@ -169,8 +180,14 @@ func (manager *VMManager) GracefulShutdownVM(id MachineUUID) <-chan bool {
 			return
 		}
 
+		// Clean up port forwarding rules before shutting down VM
+		err := CleanupPortForwarding(vmPtr.data.LocalIp.IP, vmPtr.data.LocalPort)
+		if err != nil {
+			logrus.Errorf("failed to cleanup port forwarding for VM %s: %v", id.String(), err)
+		}
+
 		vmPtr.State = StateStopped
-		err := vmPtr.Machine.Shutdown(ctx)
+		err = vmPtr.Machine.Shutdown(ctx)
 		if err != nil {
 			logrus.Errorf("machine shutdown err, id: %s, err %v, forcing shutdown", id.String(), err)
 			if forceErr := vmPtr.Machine.StopVMM(); forceErr != nil {

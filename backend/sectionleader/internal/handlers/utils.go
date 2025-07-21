@@ -25,18 +25,32 @@ type frpcConfig struct {
 
 func CreateTomlFrpcConfig(data *app.MachineData) error {
 	if data.RemotePort < constants.MinRemotePort || data.RemotePort > constants.MaxRemotePort {
-		return fmt.Errorf("port requested outside allowed port range")
+		return fmt.Errorf("SSH port requested outside allowed port range")
 	}
-	cfg := proxyConfig{
-		Name:       data.Id.String(),
+	if data.GameRemotePort < constants.MinGameRemotePort || data.GameRemotePort > constants.MaxGameRemotePort {
+		return fmt.Errorf("game port requested outside allowed port range")
+	}
+
+	// SSH proxy configuration (existing)
+	sshCfg := proxyConfig{
+		Name:       data.Id.String() + "-ssh",
 		ConnType:   "tcp",
 		LocalIp:    data.LocalIp.IP,
 		LocalPort:  22,
 		RemotePort: data.RemotePort,
 	}
 
+	// Game port proxy configuration (new)
+	gameCfg := proxyConfig{
+		Name:       data.Id.String() + "-game",
+		ConnType:   "tcp",
+		LocalIp:    net.IPv4(127, 0, 0, 1), // localhost since we're forwarding via iptables
+		LocalPort:  data.LocalPort,
+		RemotePort: data.GameRemotePort,
+	}
+
 	proxiesConfig := frpcConfig{
-		Proxies: []proxyConfig{cfg},
+		Proxies: []proxyConfig{sshCfg, gameCfg},
 	}
 
 	err := os.MkdirAll(constants.FrpcConfigDir, 0755)

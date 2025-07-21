@@ -59,19 +59,23 @@ func NewMachine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := struct {
-		MachineId   string `json:"machine_id"`
-		MachineName string `json:"machine_name"`
-		LocalIp     string `json:"local_ip"`
-		Token       string `json:"token"`
-		RemotePort  int    `json:"remote_port"`
-		RemoteIp    string `json:"remote_ip"`
+		MachineId      string `json:"machine_id"`
+		MachineName    string `json:"machine_name"`
+		LocalIp        string `json:"local_ip"`
+		Token          string `json:"token"`
+		RemotePort     int    `json:"remote_port"`       // SSH remote port
+		LocalPort      int    `json:"local_port"`        // Local port for game forwarding
+		GameRemotePort int    `json:"game_remote_port"`  // Remote port for game access
+		RemoteIp       string `json:"remote_ip"`
 	}{
-		MachineId:   createMachineRes.Id.String(),
-		MachineName: createMachineRes.Name,
-		LocalIp:     createMachineRes.LocalIp.IP.String(),
-		Token:       tokenStr,
-		RemotePort:  createMachineRes.RemotePort,
-		RemoteIp:    constants.PublicIpStr,
+		MachineId:      createMachineRes.Id.String(),
+		MachineName:    createMachineRes.Name,
+		LocalIp:        createMachineRes.LocalIp.IP.String(),
+		Token:          tokenStr,
+		RemotePort:     createMachineRes.RemotePort,
+		LocalPort:      createMachineRes.LocalPort,
+		GameRemotePort: createMachineRes.GameRemotePort,
+		RemoteIp:       constants.PublicIpStr,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
